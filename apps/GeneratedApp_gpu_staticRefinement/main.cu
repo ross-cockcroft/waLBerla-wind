@@ -124,6 +124,7 @@ namespace turbine_core {
 
         farm.setBlockForest(blocks);
         farm.initialiseForceAndControlModel();
+        farm.checkTurbinesOnFinestLevel();
 
         /// FIELDS
 
@@ -443,28 +444,17 @@ namespace turbine_core {
         	blocks, pdfFieldGpuID, sweepCollection, boundaryCollection, communication, pdfPackInfo );
 
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level!=0) return; turbineOutput.write(); }, "VTK output");
-        recursiveTimestep.addPostCollisionFunction( [&](uint_t){
-                          if ((domainSetup.snapshotHandler_->storeSnapshot) && (timeloop.getCurrentTimeStep() % domainSetup.snapshotHandler_->snapshotFrequency == 0) && (timeloop.getCurrentTimeStep() > 0)) {
-                             walberla::gpu::fieldCpy<PdfField_T, GPUField_T<real_t>>( blocks, pdfFieldCpuID, pdfFieldGpuID );
-                             walberla::gpu::fieldCpy<VectorField_T, GPUField_T<real_t>>( blocks, forceFieldCpuID, forceFieldGpuID );
-                             walberla::gpu::fieldCpy<VectorField_T, GPUField_T<real_t>>( blocks, meanVelocityFieldCpuID, meanVelocityFieldGpuID );
-                             walberla::gpu::fieldCpy<SecondOrderTensorField_T, GPUField_T<real_t>>( blocks, sumOfSquaresFieldCpuID, sumOfSquaresFieldGpuID );
-                             walberla::gpu::fieldCpy<ThirdOrderTensorField_T, GPUField_T<real_t>>( blocks, sumOfCubesFieldCpuID, sumOfCubesFieldGpuID );
-                             gpuDeviceSynchronize();
-                             domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldCpuID, forceFieldCpuID,
-                                                                          uint_t(welfordOutputSweep.getCounter()), meanVelocityFieldCpuID, sumOfSquaresFieldCpuID, sumOfCubesFieldCpuID);
-                          }
-                          }, "Snapshot creation");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t) { farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
+        if(level != blocks->getDepth()) return;
         std::vector<walberla::Block* > blocksOnLevel;
         blocks->getBlocks(blocksOnLevel, level);
         for (auto block: blocksOnLevel) {
         	farm.evaluateDensityAndVelocity(block);
         }}, "Evaluate density and velocity");
 
-        recursiveTimestep.addPostCollisionFunction( [&](uint_t){farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false);}, "Communicate macroscopic turbine data");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t) {farm.applyControl();}, "Apply Control");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false); }, "Communicate macroscopic turbine data");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.applyControl(); }, "Apply Control");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
         std::vector<walberla::Block* > blocksOnLevel;
         blocks->getBlocks(blocksOnLevel, level);
@@ -472,16 +462,17 @@ namespace turbine_core {
         	flowDriver(block);
         }}, "Setting driving force");
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t) { farm.callback( Component::Function::CALCULATE_FORCES ); }, "Calculate forces");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t){farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false);}, "Communicate force data");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback( Component::Function::CALCULATE_FORCES ); }, "Calculate forces");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false); }, "Communicate force data");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
+        if(level != blocks->getDepth()) return;
         std::vector<walberla::Block* > blocksOnLevel;
         blocks->getBlocks(blocksOnLevel, level);
         for (auto block: blocksOnLevel) {
         	farm.spreadForces(block);
         }}, "Spread forces");
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t) { farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset communication data");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset communication data");
 
         recursiveTimestep.addRefinementToTimeLoop( timeloop );
 
@@ -532,6 +523,18 @@ namespace turbine_core {
         		welfordStrainRateLambda(&block);
         	}
         }, "Welford Strain Rate Sweep" );
+        timeloop.addFuncAfterTimeStep(  [&](){
+                          if ((domainSetup.snapshotHandler_->storeSnapshot) && (timeloop.getCurrentTimeStep() % domainSetup.snapshotHandler_->snapshotFrequency == 0) && (timeloop.getCurrentTimeStep() > 0)) {
+                             walberla::gpu::fieldCpy<PdfField_T, GPUField_T<real_t>>( blocks, pdfFieldCpuID, pdfFieldGpuID );
+                             walberla::gpu::fieldCpy<VectorField_T, GPUField_T<real_t>>( blocks, forceFieldCpuID, forceFieldGpuID );
+                             walberla::gpu::fieldCpy<VectorField_T, GPUField_T<real_t>>( blocks, meanVelocityFieldCpuID, meanVelocityFieldGpuID );
+                             walberla::gpu::fieldCpy<SecondOrderTensorField_T, GPUField_T<real_t>>( blocks, sumOfSquaresFieldCpuID, sumOfSquaresFieldGpuID );
+                             walberla::gpu::fieldCpy<ThirdOrderTensorField_T, GPUField_T<real_t>>( blocks, sumOfCubesFieldCpuID, sumOfCubesFieldGpuID );
+                             gpuDeviceSynchronize();
+                             domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldCpuID, forceFieldCpuID,
+                                                                          uint_t(welfordOutputSweep.getCounter()), meanVelocityFieldCpuID, sumOfSquaresFieldCpuID, sumOfCubesFieldCpuID);
+                          }
+                          }, "Snapshot creation" );
 
         // LBM stability check
         timeloop.addFuncAfterTimeStep( turbine_core::gpu::makeDensityStabilityChecker< ScalarField_T, GPUField_T<real_t>, FlagField_T >(globalConfig, blocks, densityFieldCpuID, densityFieldGpuID, flagFieldID, FluidFlagUID, ""), "LBM stability check" );

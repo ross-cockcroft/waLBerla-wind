@@ -149,6 +149,9 @@ namespace turbine_core {
 
         farm.setBlockForest(blocks);
         farm.initialiseForceAndControlModel();
+        {%- if not grid.is_uniform() %}
+        farm.checkTurbinesOnFinestLevel();
+        {%- endif %}
 
         /// FIELDS
 

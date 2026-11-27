@@ -124,6 +124,7 @@ namespace turbine_core {
 
         farm.setBlockForest(blocks);
         farm.initialiseForceAndControlModel();
+        farm.checkTurbinesOnFinestLevel();
 
         const bool outputSetupForest = domainSetup.outputSetupForest_;
         const Vector3<uint_t> cellsPerBlock = domainSetup.cellsPerBlock_;
@@ -305,15 +306,16 @@ namespace turbine_core {
         walberla::lbm_generated::BasicRecursiveTimeStepGPU<PdfGPUField_T, SweepCollection_T, BoundaryCollection_T, walberla::timeloop::SweepTimeloop<TimingPolicy_T>> recursiveTimestep (
         	blocks, pdfFieldGpuID, sweepCollection, boundaryCollection, communication, pdfPackInfo );
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t) { farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Updata Discretisation");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Updata Discretisation");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
+            if(level != blocks->getDepth()) return;
             std::vector<walberla::Block* > blocksOnLevel;
             blocks->getBlocks(blocksOnLevel, level);
             for (auto block: blocksOnLevel) {
                 farm.evaluateDensityAndVelocity(block);
         }}, "Evaluate Density/Velocity");
 
-        recursiveTimestep.addPostCollisionFunction( [&](uint_t){farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false);}, "Sync Turbine Neighbours");
+        recursiveTimestep.addPostCollisionFunction( [&](uint_t level) { if(level != blocks->getDepth()) return; farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false); }, "Sync Turbine Neighbours");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
             std::vector<walberla::Block* > blocksOnLevel;
             blocks->getBlocks(blocksOnLevel, level);
@@ -321,9 +323,10 @@ namespace turbine_core {
                 flowDriver(block);
         }}, "Flow Driver");
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t) { farm.callback( Component::Function::CALCULATE_FORCES ); }, "Calculate Forces");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t){farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false);}, "Sync Forces");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback( Component::Function::CALCULATE_FORCES ); }, "Calculate Forces");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false); }, "Sync Forces");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
+            if(level != blocks->getDepth()) return;
             std::vector<walberla::Block* > blocksOnLevel;
             blocks->getBlocks(blocksOnLevel, level);
             for (auto block: blocksOnLevel) {
@@ -331,7 +334,7 @@ namespace turbine_core {
             }
         }, "Spread Forces");
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t) { farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset Communication Data");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset Communication Data");
 
         recursiveTimestep.addRefinementToTimeLoop( timeloop );
 

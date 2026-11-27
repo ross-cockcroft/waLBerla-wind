@@ -3,6 +3,18 @@ from .enums import *
 from .snapshot_handler import generate_snapshot_creation
 from .welford import Welford
 
+FINEST = "finest"
+
+
+def level_guard(only_level):
+    level = "blocks->getDepth()" if only_level == FINEST else only_level
+    return f"if(level != {level}) return;"
+
+
+def finest_only(body: str):
+    return f"[&](uint_t level) {{ {level_guard(FINEST)} {body} }}"
+
+
 class Timeloop:
 
     def __init__(self, name: str, grid: Grid, target: Target,
@@ -98,7 +110,7 @@ class Timeloop:
         if self.with_snapshot:
             result.append(self.add_after_timestep(("Snapshot creation",
                                                    generate_snapshot_creation(vtk_output=self.vtk_output,
-                                                                              target=self.target,  grid=self.grid,
+                                                                              target=self.target,
                                                                               field_map=self.field_map, indent=12,
                                                                               welford_output=self.welford_output,
                                                                               timeloop_name=self.name))))
@@ -141,34 +153,26 @@ class Timeloop:
         result.append(f"\tblocks, {get_field_variable(Fields.PDF, self.target)}, sweepCollection, boundaryCollection, communication, pdfPackInfo );\n")
 
         if self.vtk_output:
-            result.append(self._add_function_nonuniform(function=("VTK output", "[&](uint_t level) { if(level!=0) return; turbineOutput.write(); }"), is_sweep=False, level=0))
-        if self.with_snapshot:
-            result.append(self._add_function_nonuniform(function=("Snapshot creation",
-                                                                  generate_snapshot_creation(vtk_output=self.vtk_output,
-                                                                                             target=self.target, grid=self.grid,
-                                                                                             field_map=self.field_map, indent=12,
-                                                                                             welford_output=self.welford_output,
-                                                                                             timeloop_name=self.name)), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("VTK output", "[&](uint_t level) { if(level!=0) return; turbineOutput.write(); }"), is_sweep=False))
 
-
-        result.append(self._add_function_nonuniform(function=("Rotation", "[&](uint_t) { farm.callback(Component::Function::UPDATE_DISCRETISATION); }"), is_sweep=False))
-        result.append(self._add_function_nonuniform(function=("Evaluate density and velocity", "farm.evaluateDensityAndVelocity"), is_sweep=True))
+        result.append(self._add_function_nonuniform(function=("Rotation", finest_only("farm.callback(Component::Function::UPDATE_DISCRETISATION);")), is_sweep=False))
+        result.append(self._add_function_nonuniform(function=("Evaluate density and velocity", "farm.evaluateDensityAndVelocity"), is_sweep=True, only_level=FINEST))
 
         if self.turbine_communication:
-            result.append(self._add_function_nonuniform(function=("Communicate macroscopic turbine data", " [&](uint_t){farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false);}"), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("Communicate macroscopic turbine data", finest_only("farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false);")), is_sweep=False))
         if self.generate_control:
-            result.append(self._add_function_nonuniform(function=("Apply Control", "[&](uint_t) {farm.applyControl();}"), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("Apply Control", finest_only("farm.applyControl();")), is_sweep=False))
 
         result.append(self._add_function_nonuniform(function=("Setting driving force", "flowDriver"), is_sweep=True))
-        result.append(self._add_function_nonuniform(function=("Calculate forces", "[&](uint_t) { farm.callback( Component::Function::CALCULATE_FORCES ); }"), is_sweep=False))
+        result.append(self._add_function_nonuniform(function=("Calculate forces", finest_only("farm.callback( Component::Function::CALCULATE_FORCES );")), is_sweep=False))
 
         if self.turbine_communication:
-            result.append(self._add_function_nonuniform(function=("Communicate force data", "[&](uint_t){farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false);}"), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("Communicate force data", finest_only("farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false);")), is_sweep=False))
 
-        result.append(self._add_function_nonuniform(function=("Spread forces", "farm.spreadForces"), is_sweep=True))
+        result.append(self._add_function_nonuniform(function=("Spread forces", "farm.spreadForces"), is_sweep=True, only_level=FINEST))
 
         if self.turbine_communication:
-            result.append(self._add_function_nonuniform(function=("Reset communication data", "[&](uint_t) { farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }"), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("Reset communication data", finest_only("farm.callback(Component::Function::RESET_COMMUNICATION_DATA);")), is_sweep=False))
 
         result.append(f"\n{self.recursive_timestep_name}.addRefinementToTimeLoop( {self.name} );\n")
 
@@ -179,14 +183,22 @@ class Timeloop:
         if self.welford_strain_rate.active:
             result.append(self.add_after_timestep(function=("Welford Strain Rate Sweep", self.welford_strain_rate.after_timestep_function())))
 
+        if self.with_snapshot:
+            result.append(self.add_after_timestep(("Snapshot creation",
+                                                   generate_snapshot_creation(vtk_output=self.vtk_output,
+                                                                              target=self.target,
+                                                                              field_map=self.field_map, indent=12,
+                                                                              welford_output=self.welford_output,
+                                                                              timeloop_name=self.name))))
+
         return "\n".join(result)
 
-    def _add_function_nonuniform(self, function: tuple[str, str], is_sweep: bool, level: int=-1):
+    def _add_function_nonuniform(self, function: tuple[str, str], is_sweep: bool, only_level=None):
 
         if not is_sweep:
             void_function = function[1]
         else:
-            level_check = f"if(level != {level}) return;\n" if level != -1 else ""
+            level_check = f"{level_guard(only_level)}\n" if only_level is not None else ""
             void_function = (f"[&](uint_t level) {{\n" + level_check + f"std::vector<walberla::Block* > blocksOnLevel;\nblocks->getBlocks(blocksOnLevel, level);\nfor (auto block: blocksOnLevel) {{\n\t{function[1]}(block);\n}}}}")
 
         nl = '\n'

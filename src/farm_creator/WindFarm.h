@@ -79,6 +79,21 @@ namespace turbine_core {
                 }
             }
 
+            HOST_PREFIX void checkTurbinesOnFinestLevel() {
+                const uint_t finestLevel = forest_->getDepth();
+                for (auto & block : *forest_) {
+                    const uint_t blockLevel = forest_->getLevel(block);
+                    if (blockLevel == finestLevel)
+                        continue;
+                    for (uint_t i = 0; i < turbines_.size(); ++i) {
+                        if (turbines_[i] && turbines_[i]->getAABB().intersects(block.getAABB())) {
+                            WALBERLA_ABORT("Turbine " << i + 1 << " has actuator points in a block on level " << blockLevel
+                                           << ". The turbine functions run on the finest level (" << finestLevel << ") only.")
+                        }
+                    }
+                }
+            }
+
             HOST_PREFIX void setFieldIDs( walberla::BlockDataID & densityField, walberla::BlockDataID & velocityField,
                                           walberla::BlockDataID & forceFieldID) {
                 densityFieldID_ = densityField;

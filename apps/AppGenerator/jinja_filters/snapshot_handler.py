@@ -2,7 +2,7 @@ from .enums import *
 from .welford import Welford
 
 
-def generate_snapshot_creation(vtk_output: bool, target: Target, grid: Grid, field_map: set[Fields], indent: int,
+def generate_snapshot_creation(vtk_output: bool, target: Target, field_map: set[Fields], indent: int,
                                welford_output: Welford, timeloop_name: str):
 
     indent = " " * indent
@@ -10,10 +10,7 @@ def generate_snapshot_creation(vtk_output: bool, target: Target, grid: Grid, fie
 
     create_snapshot_string = (indent + "   " + "domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, {pdf_field}, {force_field}"
                                                "{optional_arguments});")
-    if grid == Grid.UNIFORM:
-        result = [" [&](){"]
-    else:
-        result = [" [&](uint_t){"]
+    result = [" [&](){"]
     result.append(indent + f"if ((domainSetup.snapshotHandler_->storeSnapshot) && "
                             f"({timeloop_name}.getCurrentTimeStep() % domainSetup.snapshotHandler_->snapshotFrequency == 0) && "
                             f"({timeloop_name}.getCurrentTimeStep() > 0)) {{")
