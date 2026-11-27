@@ -76,7 +76,7 @@ namespace turbine_core {
 
                 const real_t scalingFactor = real_t(1) / sumOfWeights;
 
-                auto derived = static_cast<InterpolatorType_T&>(*this);
+                auto & derived = static_cast<InterpolatorType_T&>(*this);
 
                 counter = uint_t(0);
                 for( cell_idx_t zC = cellNeighborhood.zMin(); zC <= cellNeighborhood.zMax(); ++zC ) {

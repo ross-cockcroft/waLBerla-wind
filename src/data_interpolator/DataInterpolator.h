@@ -118,7 +118,7 @@ namespace turbine_core {
                 return y_;
             }
 
-            HOST_DEVICE_PREFIX Codomain * weight() const {
+            HOST_DEVICE_PREFIX Domain * weight() const {
                 return weight_;
             }
 
@@ -150,7 +150,7 @@ namespace turbine_core {
                 free(x_); free(y_); free(weight_);
                 x_      = (Domain*)   malloc(nPoints_ * sizeof(Domain)  );
                 y_      = (Codomain*) malloc(nPoints_ * sizeof(Codomain));
-                weight_ = (Codomain*) malloc(nPoints_ * sizeof(Domain));
+                weight_ = (Domain*)   calloc(nPoints_, sizeof(Domain));
 
                 for(uint_t i = 0; i < nPoints_; ++i) {
                     x_[i] = x[i];
@@ -159,7 +159,7 @@ namespace turbine_core {
 
                 for(uint_t k = 0; k < nPoints_; ++k) {
 
-                    uint_t i_min = max(k - approximationOrder, (uint_t)0);
+                    uint_t i_min = k > approximationOrder ? k - approximationOrder : uint_t(0);
                     uint_t i_max = k;
 
                     if( k >= nPoints_ - approximationOrder - 1 ) {

@@ -34,7 +34,7 @@ namespace turbine_core {
             HOST_DEVICE_PREFIX auto zSize() const { return size_[2]; }
             HOST_DEVICE_PREFIX auto fSize() const { return size_[3]; }
 
-            HOST_DEVICE_PREFIX auto nrOfGhostLayers() {
+            HOST_DEVICE_PREFIX auto nrOfGhostLayers() const {
                 return nGhostLayers_;
             }
 
@@ -56,7 +56,7 @@ namespace turbine_core {
             HOST_DEVICE_PREFIX const Type_T & get( cell_idx_t x, cell_idx_t y, cell_idx_t z, cell_idx_t f ) const {
                 //TODO validate coordinates
 
-                const cell_idx_t idx = f * cell_idx_t(stride_[3]) + (x+nGhostLayers_) * cell_idx_t(stride_[0]) + (y+nGhostLayers_) * cell_idx_t(stride_[1]) + (z+nGhostLayers_) * cell_idx_t(stride_[2]);
+                const int64_t idx = int64_t(f) * stride_[3] + int64_t(x+nGhostLayers_) * stride_[0] + int64_t(y+nGhostLayers_) * stride_[1] + int64_t(z+nGhostLayers_) * stride_[2];
 
                 //TODO check if index is valid
 

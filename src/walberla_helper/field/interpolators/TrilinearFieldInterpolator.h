@@ -80,7 +80,7 @@ namespace turbine_core {
                         for(uint_t i = 0; i < 2; ++i)
                             weighting[4*k+2*j+i] = dxc[i] * dyc[j] * dzc[k] * inv_totalVolume;
 
-                auto derived = static_cast<InterpolatorType_T&>(*this);
+                auto & derived = static_cast<InterpolatorType_T&>(*this);
 
                 for(uint_t i = 0; i < 8; ++i) {
 		        //TODO does not account for ghost layers in non-BC regions...
