@@ -90,8 +90,7 @@ namespace turbine_core {
         WALBERLA_CHECK_GREATER(viscosity_LU, real_t(0.0), "Negative LU velocity - Did you calculate the conversion factors?")
 
         // calculate omega on coarsest level
-        const real_t omega = walberla::lbm::collision_model::omegaFromViscosity(viscosity_LU);
-        WALBERLA_LOG_INFO_ON_ROOT("omega = " << omega)
+        real_t omega = walberla::lbm::collision_model::omegaFromViscosity(viscosity_LU);
 
         /// TURBINE
 
@@ -121,6 +120,8 @@ namespace turbine_core {
 
         refinement::StaticRefinementHandler<WindFarm_T> staticRefinementHandler{ globalConfig->getOneBlock("DomainSetup"), &farm, boundarySetup.environmentSetup() };
         auto blocks = domainSetup.createStructuredBlockForest(staticRefinementHandler, fieldGhostLayers);
+        omega = walberla::lbm::collision_model::levelDependentRelaxationParameter(uint_t(0), omega, blocks->getDepth());
+        WALBERLA_LOG_INFO_ON_ROOT("omega = " << omega)
 
         farm.setBlockForest(blocks);
         farm.initialiseForceAndControlModel();

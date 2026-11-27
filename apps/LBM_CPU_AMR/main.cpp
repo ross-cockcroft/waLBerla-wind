@@ -98,7 +98,6 @@ namespace turbine_core {
 
         // calculate omega on coarsest level
         real_t omega = walberla::lbm::collision_model::omegaFromViscosity(viscosity_LU);
-        WALBERLA_LOG_INFO_ON_ROOT("omega = " << omega)
 
         /// TURBINE
 
@@ -135,6 +134,7 @@ namespace turbine_core {
         auto finestLevel = blocks->getDepth();
 
         omega = walberla::lbm::collision_model::levelDependentRelaxationParameter( uint_t(0), omega, finestLevel );
+        WALBERLA_LOG_INFO_ON_ROOT("omega = " << omega)
 
 
         /// FIELDS
