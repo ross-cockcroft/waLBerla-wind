@@ -37,11 +37,11 @@ namespace turbine_core {
 
             if (dst->layout() != src->layout()) { WALBERLA_ABORT("Cannot copy fields with different layout") }
 
-            bool canCopy =
+            bool canCopy = dst->allocSize() == src->allocSize() && (
                     (src->layout() == walberla::field::fzyx && dst->fAllocSize() == src->fAllocSize() && dst->zAllocSize() == src->zAllocSize() &&
                      dst->yAllocSize() == src->yAllocSize() && dst->xSize() == src->xSize()) ||
                     (src->layout() == walberla::field::zyxf && dst->zAllocSize() == src->zAllocSize() && dst->yAllocSize() == src->yAllocSize() &&
-                     dst->xAllocSize() == src->xAllocSize() && dst->fSize() == src->fSize());
+                     dst->xAllocSize() == src->xAllocSize() && dst->fSize() == src->fSize()));
 
             if (!canCopy) { WALBERLA_ABORT("Field have to have the same size ") }
 

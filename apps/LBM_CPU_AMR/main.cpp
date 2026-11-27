@@ -159,13 +159,12 @@ namespace turbine_core {
         BlockDataID flagFieldID = walberla::field::addFlagFieldToStorage<FlagField_T>(blocks, "flag field", fieldGhostLayers);
 
         const StorageSpecification_T storageSpec{};
-        auto allocator = std::make_shared< walberla::field::AllocateAligned<real_t, 64> >();
 
         uint_t initialWelfordCounter = 0;
         if(domainSetup.snapshotHandler_->loadSnapshot) {
             auto & ssh = domainSetup.snapshotHandler_;
 
-            auto vectorFieldDataHandling = std::make_shared<field::FlattenedFieldHandling<VectorField_T>> (blocks, fieldGhostLayers, layout, allocator);
+            auto vectorFieldDataHandling = std::make_shared<field::FlattenedFieldHandling<VectorField_T>> (blocks, fieldGhostLayers, layout);
             const auto forceFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->forceFile).c_str());
 
             forceFieldID = blocks->loadBlockData(forceFileName, vectorFieldDataHandling, "force field");
@@ -183,7 +182,7 @@ namespace turbine_core {
                 meanVelocityFieldID = blocks->loadBlockData(meanVelFileName, vectorFieldDataHandling, "mean velocity field");
 
                 if(!ssh->sosFile.empty()) {
-                    auto tensorFieldDataHandling = std::make_shared<field::FlattenedFieldHandling<SecondOrderTensorField_T>> (blocks, fieldGhostLayers, layout, allocator);
+                    auto tensorFieldDataHandling = std::make_shared<field::FlattenedFieldHandling<SecondOrderTensorField_T>> (blocks, fieldGhostLayers, layout);
 
                     const auto sosFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->sosFile).c_str());
                     sumOfSquaresFieldID = blocks->loadBlockData(sosFileName, tensorFieldDataHandling, "sum of squares field");
