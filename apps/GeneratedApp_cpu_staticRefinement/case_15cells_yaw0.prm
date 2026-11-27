@@ -15,7 +15,8 @@ DomainSetup
     snapshotPdfFile pdfs.snap;
     snapshotForceFile forces.snap;
     snapshotMeanVelFile meanU.snap;
-    snapshotSOPFile SOP.snap;
+    snapshotSOSFile SOS.snap;
+    snapshotSOCFile SOC.snap;
 
     Refinement {
 

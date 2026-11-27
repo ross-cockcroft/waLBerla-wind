@@ -65,7 +65,16 @@ namespace turbine_core {
                 if(!loadSnapshot && !storeSnapshot)
                     return;
 
+                if(welfordFile.empty() && !configFile.empty()) {
+                    welfordFile = configFile + ".welford";
+                    WALBERLA_LOG_INFO_ON_ROOT("No \"welfordFile\" given, using " << welfordFile << " in the snapshot folder for the Welford counter.")
+                }
+
                 if(storeSnapshot) {
+                    if(pdfFile.empty()) WALBERLA_ABORT("No pdf filename given for snapshot creation.")
+                    if(forceFile.empty()) WALBERLA_ABORT("No force filename given for snapshot creation.")
+                    if(configFile.empty()) WALBERLA_ABORT("No config filename given for snapshot creation.")
+
                     // create directories if they do not exist already
                     WALBERLA_ROOT_SECTION() {
                         std::filesystem::path snapshotPath(baseFolder);
@@ -76,6 +85,9 @@ namespace turbine_core {
                 }
 
                 if(loadSnapshot) {
+                    if(configFile.empty()) {
+                        WALBERLA_ABORT("No config filename given, \"snapshotConfigFile\" is needed to restore the time step.")
+                    }
                     // read snapshot config file
                     WALBERLA_ROOT_SECTION()
                     {
@@ -86,62 +98,70 @@ namespace turbine_core {
                                 WALBERLA_ABORT("Error: " << configFile << " could not be opened!")
                             } else {
                                 file >> startingTimestep;
+                                if (file.fail()) {
+                                    WALBERLA_ABORT("Error: no time step could be read from " << configFile << ".")
+                                }
                             }
                         }
 
-                        filePath = std::filesystem::path(baseFolder) / std::filesystem::path(welfordFile);
-                        {
-                            std::ifstream file(filePath);
-                            if (!file) {
-                                WALBERLA_ABORT("Error: " << welfordFile << " could not be opened!")
-                            } else {
-                                file >> welfordCounter;
-                            }
-                        }
                     }
                     walberla::mpi::broadcastObject(startingTimestep);
-                    walberla::mpi::broadcastObject(welfordCounter);
 
                     WALBERLA_LOG_INFO_ON_ROOT("Successfully read config parameters from snapshot config file:")
                     WALBERLA_LOG_INFO_ON_ROOT(" - startingTimestep = " << startingTimestep)
 
-                    WALBERLA_LOG_INFO_ON_ROOT("Successfully read welford counter from snapshot config file:")
-                    WALBERLA_LOG_INFO_ON_ROOT(" - welfordCounter = " << welfordCounter)
-
-                    // modify VTK output to start with output number xxx instead of 0
-                    std::vector< walberla::config::Config::Block* > configOutputBlock;
-                    globalConfig->getWritableGlobalBlock().getWritableBlocks("Output", configOutputBlock, 1, 1);
-                    std::vector< walberla::config::Config::Block* > configVTKBlock;
-                    configOutputBlock[0]->getWritableBlocks("VTK", configVTKBlock, 1, 1);
-                    configVTKBlock[0]->setOrAddParameter("initialExecutionCount", std::to_string(startingTimestep));
+                    setInitialExecutionCount(globalConfig, "Output");
 
                 }
 
             }
 
+            template< typename Timeloop_T >
+            void setTimeloopStep(Timeloop_T & timeloop) const {
+                if(loadSnapshot)
+                    timeloop.setCurrentTimeStep(startingTimestep + 1);
+            }
+
+            uint_t readWelfordCounter() {
+                if(welfordFile.empty()) {
+                    WALBERLA_ABORT("No welford filename given, \"welfordFile\" is needed to restore the Welford counter.")
+                }
+                WALBERLA_ROOT_SECTION()
+                {
+                    std::ifstream file(std::filesystem::path(baseFolder) / std::filesystem::path(welfordFile));
+                    if (!file) {
+                        WALBERLA_ABORT("Error: " << welfordFile << " could not be opened!")
+                    }
+                    file >> welfordCounter;
+                    if (file.fail()) {
+                        WALBERLA_ABORT("Error: no Welford counter could be read from " << welfordFile << ".")
+                    }
+                }
+                walberla::mpi::broadcastObject(welfordCounter);
+                WALBERLA_LOG_INFO_ON_ROOT("Read welford counter from snapshot welford file:")
+                WALBERLA_LOG_INFO_ON_ROOT(" - welfordCounter = " << welfordCounter)
+                return welfordCounter;
+            }
+
             void createSnapshot(const uint_t t, const std::shared_ptr<walberla::StructuredBlockForest> & blocks,
                                 const walberla::BlockDataID & pdfFieldID, const walberla::BlockDataID & forceFieldID) {
                 if(storeSnapshot) {
-                    if(t == 0){
-                        if(pdfFile.empty()) WALBERLA_ABORT("No pdf filename given for snapshot creation.")
-                        if(forceFile.empty()) WALBERLA_ABORT("No force filename given for snapshot creation.")
-                    }
-
-                    const auto pdfFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(pdfFile));
-                    const auto forceFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(forceFile));
-
                     if (t % snapshotFrequency == 0 && t > 0) {
+                        const auto pdfFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(pdfFile));
+                        const auto forceFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(forceFile));
+
                         blocks->saveBlockData(pdfFileName, pdfFieldID);
                         blocks->saveBlockData(forceFileName, forceFieldID);
-                    }
 
-                    WALBERLA_ROOT_SECTION()
-                    {
-                        const auto checkpointConfigFile = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(configFile));
-                        std::ofstream file;
-                        file.open(checkpointConfigFile.c_str());
+                        WALBERLA_ROOT_SECTION()
+                        {
+                            const auto checkpointConfigFile = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(configFile));
+                            std::ofstream file;
+                            file.open(checkpointConfigFile.c_str());
 
-                        if(file.is_open()) {
+                            if(!file.is_open()) {
+                                WALBERLA_ABORT("Error: " << configFile << " could not be opened for writing!")
+                            }
                             file << std::setprecision(16);
                             file << t << "\n";
                             file.close();
@@ -158,25 +178,25 @@ namespace turbine_core {
                 createSnapshot(t, blocks, pdfFieldID, forceFieldID);
 
                 if(storeSnapshot) {
-                    if(t == 0 && meanVelFile.empty()){
-                        WALBERLA_ABORT("No mean velocity filename given for snapshot creation.")
-                    }
-                    const auto meanVelocityFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(meanVelFile));
+                    if(meanVelFile.empty()) WALBERLA_ABORT("No mean velocity filename given for snapshot creation.")
 
                     if (t % snapshotFrequency == 0 && t > 0) {
+                        const auto meanVelocityFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(meanVelFile));
+
                         blocks->saveBlockData(meanVelocityFileName, meanVelocityFieldID);
-                    }
 
-                    WALBERLA_ROOT_SECTION()
-                    {
-                        std::ofstream file;
+                        WALBERLA_ROOT_SECTION()
+                        {
+                            std::ofstream file;
 
-                        const auto welfordConfigFile = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(welfordFile));
-                        file.open(welfordConfigFile.c_str());
+                            const auto welfordConfigFile = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(welfordFile));
+                            file.open(welfordConfigFile.c_str());
 
-                        if(file.is_open()) {
+                            if(!file.is_open()) {
+                                WALBERLA_ABORT("Error: " << welfordFile << " could not be opened for writing!")
+                            }
                             file << std::setprecision(16);
-                            file << _welfordCounter-2 << "\n";
+                            file << _welfordCounter << "\n";
                             file.close();
                         }
                     }
@@ -192,14 +212,11 @@ namespace turbine_core {
                 createSnapshot(t, blocks, pdfFieldID, forceFieldID, _welfordCounter, meanVelocityFieldID);
 
                 if(storeSnapshot) {
-                    // check for valid file names
-                    if(t == 0 && sosFile.empty()){
-                        WALBERLA_ABORT("No SoS filename given for snapshot creation.")
-                    }
-
-                    const auto sosFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(sosFile));
+                    if(sosFile.empty()) WALBERLA_ABORT("No SoS filename given for snapshot creation.")
 
                     if (t % snapshotFrequency == 0 && t > 0) {
+                        const auto sosFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(sosFile));
+
                         blocks->saveBlockData(sosFileName, sosFieldID);
                     }
                 }
@@ -214,14 +231,11 @@ namespace turbine_core {
                 createSnapshot(t, blocks, pdfFieldID, forceFieldID, _welfordCounter, meanVelocityFieldID, sosFieldID);
 
                 if(storeSnapshot) {
-                    // check for valid file names
-                    if(t == 0 && socFile.empty()){
-                        WALBERLA_ABORT("No SoC filename given for snapshot creation.")
-                    }
-
-                    const auto socFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(socFile));
+                    if(socFile.empty()) WALBERLA_ABORT("No SoC filename given for snapshot creation.")
 
                     if (t % snapshotFrequency == 0 && t > 0) {
+                        const auto socFileName = std::string(std::filesystem::path(baseFolder) / std::filesystem::path(socFile));
+
                         blocks->saveBlockData(socFileName, socFieldID);
                     }
                 }
@@ -231,7 +245,7 @@ namespace turbine_core {
             bool storeSnapshot;
 
             uint_t snapshotFrequency;
-            uint_t startingTimestep;
+            uint_t startingTimestep{0};
             uint_t welfordCounter{0};
 
             std::string baseFolder;
@@ -243,6 +257,22 @@ namespace turbine_core {
             std::string sosFile;
             std::string socFile;
             std::string welfordFile;
+
+        private:
+
+            void setInitialExecutionCount(std::shared_ptr<walberla::Config> & globalConfig, const char * outputBlockName) const {
+                std::vector< walberla::config::Config::Block* > configOutputBlock;
+                globalConfig->getWritableGlobalBlock().getWritableBlocks(outputBlockName, configOutputBlock, 0, 1);
+                for(auto * outputBlock : configOutputBlock) {
+                    std::vector< walberla::config::Config::Block* > configVTKBlock;
+                    outputBlock->getWritableBlocks("VTK", configVTKBlock);
+                    for(auto * vtkBlock : configVTKBlock) {
+                        const uint_t skipTimestep = vtkBlock->getParameter< uint_t >("skipTimestep", uint_t(0));
+                        const uint_t executionCount = (startingTimestep + 1 > skipTimestep) ? startingTimestep + 1 - skipTimestep : uint_t(0);
+                        vtkBlock->setOrAddParameter("initialExecutionCount", std::to_string(executionCount));
+                    }
+                }
+            }
         };
 
     } // domain

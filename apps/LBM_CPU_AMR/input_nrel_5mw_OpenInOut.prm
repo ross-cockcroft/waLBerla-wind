@@ -37,6 +37,11 @@ DomainSetup
     snapshotConfigFile TurbineSnapshot.config;
     snapshotBlockforestFile TurbineSnapshot.forest;
     snapshotPdfFile TurbineSnapshot.pdf;
+    snapshotForceFile TurbineSnapshot.force;
+    snapshotMeanVelFile TurbineSnapshot.mean;
+    welfordFile TurbineSnapshot.welford;
+    snapshotSOSFile TurbineSnapshot.sos;
+    snapshotSOCFile TurbineSnapshot.soc;
 }
 
 Parameters

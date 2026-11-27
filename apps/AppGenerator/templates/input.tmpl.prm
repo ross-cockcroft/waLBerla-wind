@@ -12,7 +12,9 @@ DomainSetup
     snapshotPdfFile TurbineSnapshot.pdf;
     snapshotForceFile TurbineSnapshot.force;
     snapshotMeanVelFile TurbineSnapshot.mean;
-    snapshotSOPFile TurbineSnapshot.sop;
+    welfordFile TurbineSnapshot.welford;
+    snapshotSOSFile TurbineSnapshot.sos;
+    snapshotSOCFile TurbineSnapshot.soc;
 {%- endif %}
 
 {%- if grid != Grid.UNIFORM %}

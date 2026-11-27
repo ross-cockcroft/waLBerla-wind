@@ -4,7 +4,8 @@ from .enums import *
 class Welford:
 
     def __init__(self, basename: str, target: Target, active: bool, grid: Grid,
-                 field: Fields, mean_field: Fields, sos_field: Fields = None, soc_field: Fields = None):
+                 field: Fields, mean_field: Fields, sos_field: Fields = None, soc_field: Fields = None,
+                 initial_counter: str = '0'):
 
         if soc_field:
             assert sos_field, "You cannot specify a Welford with SoC output without SoS output."
@@ -15,6 +16,7 @@ class Welford:
         self.mean_field = mean_field
         self.sos_field = sos_field
         self.soc_field = soc_field
+        self.initial_counter = initial_counter
         self.welford_fields: list[Fields] = [field, mean_field, sos_field, soc_field]
         self.welford_fields = [f for f in self.welford_fields if f is not None]
         self.welford_fields.sort(key=lambda curr_field: str(curr_field))
@@ -30,7 +32,7 @@ class Welford:
         result.append(f"/// {self.basename.upper()}")
         result.append(f"walberla::pystencils::waLBerlaWind_{self.basename} {self.sweep_name()}(")
         result.append("\t" + "".join([f"{get_field_variable(field, self.target)}, " for field in self.welford_fields]))
-        result.append(f"\treal_t(initialWelfordCounter){', gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2]' if runtime_gpu_indexing else ''});")
+        result.append(f"\treal_t({self.initial_counter}){', gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2]' if runtime_gpu_indexing else ''});")
 
         return "\n".join(result)
 

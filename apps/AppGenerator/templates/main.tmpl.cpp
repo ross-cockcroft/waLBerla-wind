@@ -1,7 +1,8 @@
 {% set welford_output = Welford(welford_output_name, target, vtk_output and Fields.MEAN_VELOCITY in field_map, grid,
                                 field=Fields.VELOCITY, mean_field=Fields.MEAN_VELOCITY,
                                 sos_field=Fields.SUM_OF_SQUARES if Fields.SUM_OF_SQUARES in field_map else None,
-                                soc_field=Fields.SUM_OF_CUBES if Fields.SUM_OF_CUBES in field_map else None) -%}
+                                soc_field=Fields.SUM_OF_CUBES if Fields.SUM_OF_CUBES in field_map else None,
+                                initial_counter='initialWelfordCounter') -%}
 {% set welford_eddy_viscosity = Welford(welford_eddy_viscosity_name, target, vtk_output and Fields.MEAN_EDDY_VISCOSITY in field_map, grid,
                                         field=Fields.EDDY_VISCOSITY, mean_field=Fields.MEAN_EDDY_VISCOSITY) -%}
 {% set welford_strain_rate = Welford(welford_strain_rate_name, target, vtk_output and Fields.MEAN_STRAIN_RATE in field_map, grid,

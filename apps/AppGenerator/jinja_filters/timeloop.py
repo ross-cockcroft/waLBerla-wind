@@ -28,7 +28,8 @@ class Timeloop:
 
     def declaration(self):
         return (f"auto {self.name} = walberla::timeloop::SweepTimeloop<TimingPolicy_T>"
-                f"(blocks->getBlockStorage(), timesteps);")
+                f"(blocks->getBlockStorage(), timesteps);\n"
+                f"domainSetup.snapshotHandler_->setTimeloopStep({self.name});")
 
     def single_step(self):
         return f"{self.name}.singleStep(timing);"
@@ -58,13 +59,6 @@ class Timeloop:
         after_streamcollide = []
         if self.vtk_output:
             after_streamcollide.append({"VTK output": "output"})
-        if self.with_snapshot:
-            after_streamcollide.append({"Snapshot creation":
-                                      generate_snapshot_creation(vtk_output=self.vtk_output,
-                                                                 target=self.target,  grid=self.grid,
-                                                                 field_map=self.field_map, indent=12,
-                                                                 welford_output=self.welford_output,
-                                                                 timeloop_name=self.name)})
 
         result.append(self._add_sweep_uniform(sweep=("LBM stream-collide", "sweepCollection.streamCollide()"), after_fcts=after_streamcollide))
 
@@ -100,6 +94,14 @@ class Timeloop:
         result.append(self._add_sweep_uniform(sweep=("Spread forces", "spreadForces"),
                                               before_fcts=before_spread,
                                               after_fcts=after_spread))
+
+        if self.with_snapshot:
+            result.append(self.add_after_timestep(("Snapshot creation",
+                                                   generate_snapshot_creation(vtk_output=self.vtk_output,
+                                                                              target=self.target,  grid=self.grid,
+                                                                              field_map=self.field_map, indent=12,
+                                                                              welford_output=self.welford_output,
+                                                                              timeloop_name=self.name))))
 
         return "\n".join(result)
 

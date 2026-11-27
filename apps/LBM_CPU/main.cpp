@@ -164,7 +164,7 @@ namespace turbine_core {
 
 
             if(!ssh->meanVelFile.empty()) {
-                initialWelfordCounter = ssh->welfordCounter;
+                initialWelfordCounter = ssh->readWelfordCounter();
                 const auto meanVelFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->meanVelFile).c_str());
 
                 meanVelocityFieldID = blocks->loadBlockData(meanVelFileName, vectorFieldDataHandling, "mean velocity field");
@@ -174,6 +174,8 @@ namespace turbine_core {
 
                     const auto sosFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->sosFile).c_str());
                     sumOfSquaresFieldID = blocks->loadBlockData(sosFileName, secondOrderTensorFieldDataHandling, "sum of squares field");
+                } else {
+                    WALBERLA_ABORT("snapshotSOSFile is not set, the sum of squares cannot be restored.")
                 }
             }
 
@@ -297,6 +299,7 @@ namespace turbine_core {
 
         // create time loop
         walberla::SweepTimeloop timeloop( blocks->getBlockStorage(), timesteps );
+        domainSetup.snapshotHandler_->setTimeloopStep(timeloop);
 
         farm.setTimeloop(&timeloop);
 
@@ -379,12 +382,7 @@ namespace turbine_core {
                        << walberla::Sweep( boundaryCollection.getSweep(), "Boundary handling" );
         timeloop.add() << walberla::Sweep( sweepCollection.stream() , "LBM stream sweep");
         timeloop.add() << walberla::Sweep( sweepCollection.collide() , "LBM collide sweep")
-                       << walberla::AfterFunction( output, "VTK output" )
-                       << walberla::AfterFunction( [&](){
-                           domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldID, forceFieldID,
-                                                                        uint_t(welfordSweepVelocity.getCounter()), meanVelocityFieldID,
-                                                                        sumOfSquaresFieldID);
-                       }, "Snapshot creation");
+                       << walberla::AfterFunction( output, "VTK output" );
         timeloop.add() << walberla::BeforeFunction([&](){
                               if(welfordIntervalOutput // && int(welfordSweepOutput.counter_)
                                  && (uint_t(welfordSweepVelocity.getCounter()) % welfordIntervalOutput == 0)){
@@ -422,6 +420,12 @@ namespace turbine_core {
                        << walberla::AfterFunction( [&]() {
                            farm.callback(Component::Function::RESET_COMMUNICATION_DATA);
                        }, "ResetCommunicationData" );
+
+        timeloop.addFuncAfterTimeStep( [&](){
+                           domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldID, forceFieldID,
+                                                                        uint_t(welfordSweepVelocity.getCounter()), meanVelocityFieldID,
+                                                                        sumOfSquaresFieldID);
+                       }, "Snapshot creation");
 
         // LBM stability check
         timeloop.addFuncAfterTimeStep( walberla::makeSharedFunctor( walberla::field::makeStabilityChecker< PdfField_T, FlagField_T >(globalConfig, blocks, pdfFieldID, flagFieldID, FluidFlagUID ) ),

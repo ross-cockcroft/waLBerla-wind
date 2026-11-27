@@ -480,6 +480,7 @@ namespace turbine_core {
 #endif
 
         walberla::timeloop::SweepTimeloop<TimingPolicy_T> precursorTimeLoop( precursorBlocks->getBlockStorage(), timesteps );
+        precursorDomainSetup.snapshotHandler_->setTimeloopStep(precursorTimeLoop);
         walberla::timeloop::SweepTimeloop<TimingPolicy_T> concurrentTimeLoop( concurrentBlocks->getBlockStorage(), timesteps );
         farm.setTimeloop(&concurrentTimeLoop);
 
@@ -659,7 +660,7 @@ namespace turbine_core {
 
                         << walberla::AfterFunction( [&](){
 
-                            if (precursorTimeLoop.getCurrentTimeStep() % precursorDomainSetup.snapshotHandler_->snapshotFrequency == 0 && precursorTimeLoop.getCurrentTimeStep() > 0) {
+                            if (precursorDomainSetup.snapshotHandler_->storeSnapshot && precursorTimeLoop.getCurrentTimeStep() % precursorDomainSetup.snapshotHandler_->snapshotFrequency == 0 && precursorTimeLoop.getCurrentTimeStep() > 0) {
                                 walberla::gpu::fieldCpy < PdfField_T, walberla::gpu::GPUField<real_t> >
                                         (precursorBlocks, precursorPdfFieldCpuID, precursorPdfFieldGpuID);
                                 walberla::gpu::fieldCpy < VectorField_T, walberla::gpu::GPUField<real_t> >

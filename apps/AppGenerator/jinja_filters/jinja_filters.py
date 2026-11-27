@@ -85,8 +85,8 @@ def generate_field_creation(field_map: set[Fields], target: Target, snapshot: bo
 
         result.append("\n\tif(!ssh->meanVelFile.empty()) {")
         result.append("\t\tconst auto meanVelFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->meanVelFile).c_str());")
-        if generate_wfb or vtk_output:
-            result.append("\t\tinitialWelfordCounter = ssh->welfordCounter;\n")
+        if vtk_output and Fields.MEAN_VELOCITY in field_map:
+            result.append("\t\tinitialWelfordCounter = ssh->readWelfordCounter();\n")
 
         if vtk_output and Fields.MEAN_VELOCITY in field_map:
             result.append(f"\t\t{get_field_variable(Fields.MEAN_VELOCITY, Target.CPU)} = blocks->loadBlockData(meanVelFileName, vectorFieldDataHandling, "
@@ -97,6 +97,8 @@ def generate_field_creation(field_map: set[Fields], target: Target, snapshot: bo
                 result.append(f"\t\t\tauto secondOrderTensorFieldDataHandling = std::make_shared<field::FlattenedFieldHandling<{get_field_type(Fields.SUM_OF_SQUARES, None)}>> (blocks, fieldGhostLayers, layout, allocator);")
                 result.append(f"\t\t\tconst auto sosFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->sosFile).c_str());")
                 result.append(f"\t\t\t{get_field_variable(Fields.SUM_OF_SQUARES, Target.CPU)} = blocks->loadBlockData(sosFileName, secondOrderTensorFieldDataHandling, \"{get_field_name(Fields.SUM_OF_SQUARES)}\");")
+                result.append(f"\t\t}} else {{")
+                result.append("\t\t\tWALBERLA_ABORT(\"snapshotSOSFile is not set, the sum of squares cannot be restored.\")")
                 result.append(f"\t\t}}")
 
             if Fields.SUM_OF_CUBES in field_map:
@@ -104,6 +106,8 @@ def generate_field_creation(field_map: set[Fields], target: Target, snapshot: bo
                 result.append(f"\t\t\tauto thirdOrderTensorFieldDataHandling = std::make_shared<field::FlattenedFieldHandling<{get_field_type(Fields.SUM_OF_CUBES, None)}>> (blocks, fieldGhostLayers, layout, allocator);")
                 result.append(f"\t\t\tconst auto socFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->socFile).c_str());")
                 result.append(f"\t\t\t{get_field_variable(Fields.SUM_OF_CUBES, Target.CPU)} = blocks->loadBlockData(socFileName, thirdOrderTensorFieldDataHandling, \"{get_field_name(Fields.SUM_OF_CUBES, Target.CPU)}\");")
+                result.append(f"\t\t}} else {{")
+                result.append("\t\t\tWALBERLA_ABORT(\"snapshotSOCFile is not set, the sum of cubes cannot be restored.\")")
                 result.append(f"\t\t}}")
 
         result.append("\t}")
@@ -387,7 +391,7 @@ def generate_flow_driver(target: Target, runtime_gpu_indexing: bool):
 
     result = [f"walberla::wind::FlowDriverCollection flowDriver(blocks, &timeloop, globalConfig, domainSetup, "
               f"{get_field_variable(Fields.FORCE, target)}, {get_field_variable(Fields.VELOCITY, target)}, fieldGhostLayers{', gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2]' if runtime_gpu_indexing else ''});",
-              "for(auto & block : *blocks) { flowDriver(&block); }"]
+              "if(!domainSetup.snapshotHandler_->loadSnapshot) { for(auto & block : *blocks) { flowDriver(&block); } }"]
 
     return "\n".join(result)
 

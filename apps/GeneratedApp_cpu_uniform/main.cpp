@@ -156,7 +156,7 @@ namespace turbine_core {
 
         	if(!ssh->meanVelFile.empty()) {
         		const auto meanVelFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->meanVelFile).c_str());
-        		initialWelfordCounter = ssh->welfordCounter;
+        		initialWelfordCounter = ssh->readWelfordCounter();
 
         		meanVelocityFieldCpuID = blocks->loadBlockData(meanVelFileName, vectorFieldDataHandling, "mean velocity field CPU");
 
@@ -164,11 +164,15 @@ namespace turbine_core {
         			auto secondOrderTensorFieldDataHandling = std::make_shared<field::FlattenedFieldHandling<SecondOrderTensorField_T>> (blocks, fieldGhostLayers, layout, allocator);
         			const auto sosFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->sosFile).c_str());
         			sumOfSquaresFieldCpuID = blocks->loadBlockData(sosFileName, secondOrderTensorFieldDataHandling, "sum of squares field");
+        		} else {
+        			WALBERLA_ABORT("snapshotSOSFile is not set, the sum of squares cannot be restored.")
         		}
         		if(!ssh->socFile.empty()) {
         			auto thirdOrderTensorFieldDataHandling = std::make_shared<field::FlattenedFieldHandling<ThirdOrderTensorField_T>> (blocks, fieldGhostLayers, layout, allocator);
         			const auto socFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->socFile).c_str());
         			sumOfCubesFieldCpuID = blocks->loadBlockData(socFileName, thirdOrderTensorFieldDataHandling, "sum of cubes field CPU");
+        		} else {
+        			WALBERLA_ABORT("snapshotSOCFile is not set, the sum of cubes cannot be restored.")
         		}
         	}
         } else {
@@ -310,11 +314,11 @@ namespace turbine_core {
         /// WELFORDEDDYVISCOSITY
         walberla::pystencils::waLBerlaWind_WelfordEddyViscosity welfordEddyViscositySweep(
         	eddyViscosityFieldCpuID, meanEddyViscosityFieldCpuID, 
-        	real_t(initialWelfordCounter));
+        	real_t(0));
         /// WELFORDSTRAINRATE
         walberla::pystencils::waLBerlaWind_WelfordStrainRate welfordStrainRateSweep(
         	meanStrainRateFieldCpuID, strainRateFieldCpuID, 
-        	real_t(initialWelfordCounter));
+        	real_t(0));
 
         /// COMMUNICATION
 
@@ -336,12 +340,13 @@ namespace turbine_core {
         using TimingPolicy_T = walberla::timing::WcPolicy;
         // create time loop
         auto timeloop = walberla::timeloop::SweepTimeloop<TimingPolicy_T>(blocks->getBlockStorage(), timesteps);
+        domainSetup.snapshotHandler_->setTimeloopStep(timeloop);
 
         farm.setTimeloop(&timeloop);
 
         /// driving forces
         walberla::wind::FlowDriverCollection flowDriver(blocks, &timeloop, globalConfig, domainSetup, forceFieldCpuID, velocityFieldCpuID, fieldGhostLayers);
-        for(auto & block : *blocks) { flowDriver(&block); }
+        if(!domainSetup.snapshotHandler_->loadSnapshot) { for(auto & block : *blocks) { flowDriver(&block); } }
 
         uint_t maxKernelWidth = 1;
         if constexpr (std::is_same_v<WindFarm_T::Interpolator, KernelFieldInterpolator_T<InterpolationKernel_T>>) {
@@ -403,13 +408,7 @@ namespace turbine_core {
                        << walberla::Sweep(boundaryCollection.getSweep(), "Boundary Handling");
 
         timeloop.add() << walberla::Sweep(sweepCollection.streamCollide(), "LBM stream-collide")
-                       << walberla::AfterFunction(output, "VTK output")
-                       << walberla::AfterFunction( [&](){
-                          if ((domainSetup.snapshotHandler_->storeSnapshot) && (timeloop.getCurrentTimeStep() % domainSetup.snapshotHandler_->snapshotFrequency == 0) && (timeloop.getCurrentTimeStep() > 0)) {
-                             domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldCpuID, forceFieldCpuID,
-                                                                          uint_t(welfordOutputSweep.getCounter()), meanVelocityFieldCpuID, sumOfSquaresFieldCpuID, sumOfCubesFieldCpuID);
-                          }
-                          }, "Snapshot creation");
+                       << walberla::AfterFunction(output, "VTK output");
 
         timeloop.add() << walberla::BeforeFunction([&](){
                            	if(welfordInterval && (uint_t(welfordOutputSweep.getCounter()) % welfordInterval == 0)){
@@ -467,6 +466,12 @@ namespace turbine_core {
                        << walberla::Sweep(spreadForces, "Spread forces")
                        << walberla::AfterFunction([&]() { farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset communication data");
 
+        timeloop.addFuncAfterTimeStep(  [&](){
+                          if ((domainSetup.snapshotHandler_->storeSnapshot) && (timeloop.getCurrentTimeStep() % domainSetup.snapshotHandler_->snapshotFrequency == 0) && (timeloop.getCurrentTimeStep() > 0)) {
+                             domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldCpuID, forceFieldCpuID,
+                                                                          uint_t(welfordOutputSweep.getCounter()), meanVelocityFieldCpuID, sumOfSquaresFieldCpuID, sumOfCubesFieldCpuID);
+                          }
+                          }, "Snapshot creation" );
 
         // LBM stability check
         timeloop.addFuncAfterTimeStep( walberla::makeSharedFunctor( walberla::field::makeStabilityChecker< PdfField_T, FlagField_T >(globalConfig, blocks, pdfFieldCpuID, flagFieldID, FluidFlagUID )), "LBM stability check" );

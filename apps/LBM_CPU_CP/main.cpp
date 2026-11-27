@@ -371,6 +371,7 @@ namespace turbine_core {
         // create time loop
         walberla::SweepTimeloop concurrentTimeLoop( concurrentBlocks->getBlockStorage(), timesteps );
         walberla::SweepTimeloop precursorTimeLoop( precursorBlocks->getBlockStorage(), timesteps );
+        precursorDomainSetup.snapshotHandler_->setTimeloopStep(precursorTimeLoop);
 
         farm.setTimeloop(&concurrentTimeLoop);
 

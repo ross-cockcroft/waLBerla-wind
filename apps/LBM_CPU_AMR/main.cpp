@@ -177,7 +177,7 @@ namespace turbine_core {
 
 
             if(!ssh->meanVelFile.empty()) {
-                initialWelfordCounter = ssh->welfordCounter;
+                initialWelfordCounter = ssh->readWelfordCounter();
                 const auto meanVelFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->meanVelFile).c_str());
 
                 meanVelocityFieldID = blocks->loadBlockData(meanVelFileName, vectorFieldDataHandling, "mean velocity field");
@@ -187,6 +187,8 @@ namespace turbine_core {
 
                     const auto sosFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->sosFile).c_str());
                     sumOfSquaresFieldID = blocks->loadBlockData(sosFileName, tensorFieldDataHandling, "sum of squares field");
+                } else {
+                    WALBERLA_ABORT("snapshotSOSFile is not set, the sum of squares cannot be restored.")
                 }
             }
 
@@ -310,6 +312,7 @@ namespace turbine_core {
 
         // create time loop
         walberla::SweepTimeloop timeloop( blocks->getBlockStorage(), timesteps );
+        domainSetup.snapshotHandler_->setTimeloopStep(timeloop);
 
         farm.setTimeloop(&timeloop);
 

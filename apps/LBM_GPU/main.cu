@@ -175,7 +175,7 @@ namespace turbine_core {
 
 
             if(!ssh->meanVelFile.empty()) {
-                initialWelfordCounter = ssh->welfordCounter;
+                initialWelfordCounter = ssh->readWelfordCounter();
                 const auto meanVelFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->meanVelFile).c_str());
 
                 meanVelocityFieldCpuID = blocks->loadBlockData(meanVelFileName, vectorFieldDataHandling, "mean velocity field output CPU");
@@ -185,6 +185,8 @@ namespace turbine_core {
 
                     const auto sosFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->sosFile).c_str());
                     sumOfSquaresFieldCpuID = blocks->loadBlockData(sosFileName, tensorFieldDataHandling, "sum of squares field CPU");
+                } else {
+                    WALBERLA_ABORT("snapshotSOSFile is not set, the sum of squares cannot be restored.")
                 }
             }
 
@@ -346,6 +348,7 @@ namespace turbine_core {
         using TimingPolicy_T = walberla::timing::DeviceSynchronizePolicy;
 #endif
         auto timeloop = walberla::timeloop::SweepTimeloop<TimingPolicy_T>(blocks->getBlockStorage(), timesteps);
+        domainSetup.snapshotHandler_->setTimeloopStep(timeloop);
 
         farm.setTimeloop(&timeloop);
 
@@ -438,26 +441,7 @@ namespace turbine_core {
         timeloop.add() << walberla::Sweep( sweepCollection.stream() , "LBM stream sweep");
         timeloop.add() << walberla::BeforeFunction(synchroniseGpuStreams, "Gpu streams synchronization")
                        << walberla::Sweep(sweepCollection.collide(), "LBM collide sweep")
-                       << walberla::AfterFunction( output, "VTK output" )
-                << walberla::AfterFunction( [&]() {
-                    if ((domainSetup.snapshotHandler_->storeSnapshot) &&
-                        (timeloop.getCurrentTimeStep() % domainSetup.snapshotHandler_->snapshotFrequency == 0) &&
-                        (timeloop.getCurrentTimeStep() > 0)) {
-                        walberla::gpu::fieldCpy < PdfField_T, GPUField_T < real_t > >
-                                (blocks, pdfFieldCpuID, pdfFieldGpuID);
-                        walberla::gpu::fieldCpy < VectorField_T, GPUField_T < real_t > >
-                                (blocks, meanVelocityFieldCpuID, meanVelocityFieldGpuID);
-                        walberla::gpu::fieldCpy < VectorField_T, GPUField_T < real_t > >
-                                (blocks, forceFieldCpuID, forceFieldGpuID);
-                        walberla::gpu::fieldCpy < SecondOrderTensorField_T, GPUField_T < real_t > >
-                                (blocks, sumOfSquaresFieldCpuID, sumOfSquaresFieldGpuID);
-                        gpuDeviceSynchronize();
-                        domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldCpuID,
-                                                                     forceFieldCpuID,
-                                                                     uint_t(welfordSweepVelocity.getCounter()), meanVelocityFieldCpuID,
-                                                                     sumOfSquaresFieldCpuID);
-                    }
-                }, "Snapshot creation");
+                       << walberla::AfterFunction( output, "VTK output" );
 
         timeloop.add() << walberla::BeforeFunction([&](){
                               if(welfordIntervalOutput // && int(welfordSweepOutput.counter_)
@@ -497,6 +481,26 @@ namespace turbine_core {
                            TURBINE_GPU_CHECK()
                            farm.callback(Component::Function::RESET_COMMUNICATION_DATA);
                        }, "ResetCommunicationData" );
+
+        timeloop.addFuncAfterTimeStep( [&]() {
+                    if ((domainSetup.snapshotHandler_->storeSnapshot) &&
+                        (timeloop.getCurrentTimeStep() % domainSetup.snapshotHandler_->snapshotFrequency == 0) &&
+                        (timeloop.getCurrentTimeStep() > 0)) {
+                        walberla::gpu::fieldCpy < PdfField_T, GPUField_T < real_t > >
+                                (blocks, pdfFieldCpuID, pdfFieldGpuID);
+                        walberla::gpu::fieldCpy < VectorField_T, GPUField_T < real_t > >
+                                (blocks, meanVelocityFieldCpuID, meanVelocityFieldGpuID);
+                        walberla::gpu::fieldCpy < VectorField_T, GPUField_T < real_t > >
+                                (blocks, forceFieldCpuID, forceFieldGpuID);
+                        walberla::gpu::fieldCpy < SecondOrderTensorField_T, GPUField_T < real_t > >
+                                (blocks, sumOfSquaresFieldCpuID, sumOfSquaresFieldGpuID);
+                        gpuDeviceSynchronize();
+                        domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldCpuID,
+                                                                     forceFieldCpuID,
+                                                                     uint_t(welfordSweepVelocity.getCounter()), meanVelocityFieldCpuID,
+                                                                     sumOfSquaresFieldCpuID);
+                    }
+                }, "Snapshot creation");
 
         // LBM stability check
         timeloop.addFuncAfterTimeStep( turbine_core::gpu::makeDensityStabilityChecker< ScalarField_T, GPUField_T<real_t>, FlagField_T >(globalConfig, blocks, densityFieldCpuID, densityFieldGpuID, flagFieldID, FluidFlagUID, "" ),
