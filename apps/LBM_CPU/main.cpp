@@ -46,13 +46,11 @@
 
 namespace turbine_core {
 
-    using InterpolationKernel_T = projectors::SmoothedDiracDeltaKernel;
     using DistributionKernel_T = projectors::SmoothedDiracDeltaKernel;
 
     using WindFarm_T = WindFarm<topology::cpu::Tree, creator::ConfigTurbineCreator,
             ScalarField_T, VectorField_T, VectorField_T,
-//            TrilinearMacroscopicFieldInterpolator,
-            KernelFieldInterpolator_T<InterpolationKernel_T>,
+            FieldInterpolator_T,
             KernelDistributor_T<DistributionKernel_T>>;
 
     using TurbineOutput_T = output::TurbineOutput<
@@ -315,9 +313,6 @@ namespace turbine_core {
         communication.addPackInfo( std::make_shared< walberla::field::communication::PackInfo<VectorField_T > >( velocityFieldID ) );
 
         uint_t maxKernelWidth = 1;
-        if constexpr (std::is_same_v<WindFarm_T::Interpolator, KernelFieldInterpolator_T<InterpolationKernel_T>>) {
-            maxKernelWidth = std::max({maxKernelWidth, InterpolationKernel_T::xWidth, InterpolationKernel_T::yWidth, InterpolationKernel_T::zWidth});
-        }
         if constexpr (std::is_same_v<WindFarm_T::Distributor, KernelDistributor_T<DistributionKernel_T >>) {
             maxKernelWidth = std::max({maxKernelWidth, DistributionKernel_T::xWidth, DistributionKernel_T::yWidth, DistributionKernel_T::zWidth});
         }

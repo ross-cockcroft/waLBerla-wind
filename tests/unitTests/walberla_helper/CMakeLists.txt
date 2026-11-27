@@ -35,6 +35,10 @@ waLBerla_add_test_executable( TurbineCoreMacroscopicFieldInterpolationTest field
 target_link_libraries( TurbineCoreMacroscopicFieldInterpolationTest walberla::core walberla::field walberla_helper)
 waLBerla_execute_test( NAME TurbineCoreMacroscopicFieldInterpolationTest )
 
+waLBerla_add_test_executable( ActuatorSamplingLinearFieldTest field/interpolators/ActuatorSamplingLinearFieldTest.cpp )
+target_link_libraries( ActuatorSamplingLinearFieldTest walberla::core walberla::field walberla_helper)
+waLBerla_execute_test( NAME ActuatorSamplingLinearFieldTest )
+
 ####################
 ### Distributors ###
 ####################

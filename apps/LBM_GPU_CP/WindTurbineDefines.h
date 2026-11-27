@@ -38,9 +38,8 @@ namespace turbine_core {
     /// define different interpolators and distributors
 
     template<class Kernel_T>
-    using KernelFieldInterpolator_T = projectors::KernelFieldInterpolator<field::Field<real_t>, Kernel_T>;
-
-    template<class Kernel_T>
     using KernelDistributor_T = projectors::KernelFieldDistributor<field::Field<real_t>, Kernel_T>;
+
+    using FieldInterpolator_T = projectors::TrilinearFieldInterpolator<field::Field<real_t>>;
 
 }

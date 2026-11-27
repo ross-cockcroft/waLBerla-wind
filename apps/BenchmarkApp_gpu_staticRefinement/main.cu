@@ -37,17 +37,15 @@ namespace turbine_core {
     // define different interpolators and distributors
 
     template<class Kernel_T>
-    using KernelFieldInterpolator_T = projectors::KernelFieldInterpolator<field::Field<real_t>, Kernel_T>;
-
-    template<class Kernel_T>
     using KernelDistributor_T = projectors::KernelFieldDistributor<field::Field<real_t>, Kernel_T>;
 
-    using InterpolationKernel_T = projectors::SmoothedDiracDeltaKernel;
+    using FieldInterpolator_T = projectors::TrilinearFieldInterpolator<field::Field<real_t>>;
+
     using DistributionKernel_T = projectors::SmoothedDiracDeltaKernel;
 
     using WindFarm_T = WindFarm<topology::gpu::Tree, creator::ConfigTurbineCreator,
             ScalarField_T, VectorField_T, VectorField_T,
-            KernelFieldInterpolator_T<InterpolationKernel_T>,
+            FieldInterpolator_T,
             KernelDistributor_T<DistributionKernel_T>>;
 
     using TurbineOutput_T = output::TurbineOutput<
@@ -286,9 +284,6 @@ namespace turbine_core {
         for(auto & block : *blocks) { flowDriver(&block); }
 
         uint_t maxKernelWidth = 1;
-        if constexpr (std::is_same_v<WindFarm_T::Interpolator, KernelFieldInterpolator_T<InterpolationKernel_T>>) {
-            maxKernelWidth = std::max({maxKernelWidth, InterpolationKernel_T::xWidth, InterpolationKernel_T::yWidth, InterpolationKernel_T::zWidth});
-        }
         if constexpr (std::is_same_v<WindFarm_T::Distributor, KernelDistributor_T<DistributionKernel_T >>) {
             maxKernelWidth = std::max({maxKernelWidth, DistributionKernel_T::xWidth, DistributionKernel_T::yWidth, DistributionKernel_T::zWidth});
         }
