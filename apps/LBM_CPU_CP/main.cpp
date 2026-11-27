@@ -551,32 +551,22 @@ namespace turbine_core {
             {
                 WALBERLA_LOG_INFO_ON_ROOT("Concurrent starts")
 
+                precursorCommunication();
+
                 concurrentTimer.start();
 
                 auto concurrentBlock = concurrentBlocks->begin();
                 for (auto precursorBlock = precursorBlocks->begin(); precursorBlock != precursorBlocks->end();
-                     ++precursorBlock)
+                     ++precursorBlock, ++concurrentBlock)
                 {
-                    const auto gl = cell_idx_t(fieldGhostLayers);
-                    auto precursorPDFField  = precursorBlock->getData< PdfField_T >(precursorPdfFieldID);
-                    auto concurrentPDFField   = concurrentBlock->getData< PdfField_T >(concurrentPdfFieldID);
-                    std::copy( &precursorPDFField->get(-gl,-gl,-gl, 0),
-                        &precursorPDFField->get(+gl,+gl,+gl, PdfField_T::F_SIZE-1),
-                        &concurrentPDFField->get(-gl,-gl,-gl, 0) );
-
-                    auto precursorDensityField  = precursorBlock->getData< ScalarField_T >(precursorDensityFieldID);
-                    auto concurrentDensityField   = concurrentBlock->getData< ScalarField_T >(concurrentDensityFieldID);
-                    std::copy( &precursorDensityField->get(-gl,-gl,-gl, 0),
-                        &precursorDensityField->get(+gl,+gl,+gl, ScalarField_T::F_SIZE-1),
-                        &concurrentDensityField->get(-gl,-gl,-gl, 0) );
-
-                    auto precursorVelocityField  = precursorBlock->getData< VectorField_T >(precursorVelocityFieldID);
-                    auto concurrentVelocityField   = concurrentBlock->getData< VectorField_T >(concurrentVelocityFieldID);
-                    std::copy( &precursorVelocityField->get(-gl,-gl,-gl, 0),
-                        &precursorVelocityField->get(+gl,+gl,+gl, VectorField_T::F_SIZE-1),
-                        &concurrentVelocityField->get(-gl,-gl,-gl, 0) );
-
-                    concurrentBlock++;
+                    turbine_core::field::fieldCopy(concurrentBlock->getData< PdfField_T >(concurrentPdfFieldID),
+                                                   precursorBlock->getData< PdfField_T >(precursorPdfFieldID));
+                    turbine_core::field::fieldCopy(concurrentBlock->getData< ScalarField_T >(concurrentDensityFieldID),
+                                                   precursorBlock->getData< ScalarField_T >(precursorDensityFieldID));
+                    turbine_core::field::fieldCopy(concurrentBlock->getData< VectorField_T >(concurrentVelocityFieldID),
+                                                   precursorBlock->getData< VectorField_T >(precursorVelocityFieldID));
+                    turbine_core::field::fieldCopy(concurrentBlock->getData< VectorField_T >(concurrentForceFieldID),
+                                                   precursorBlock->getData< VectorField_T >(precursorForceFieldID));
                 }
             }
 

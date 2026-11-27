@@ -690,6 +690,8 @@ namespace turbine_core {
             precursorTimeLoop.singleStep(precursorTiming);
 
             if(i == concurrentStart) {
+                precursorCommunication();
+
                 WALBERLA_LOG_INFO_ON_ROOT("Initialising concurrent simulation...")
 
                 concurrentTimer.start();
