@@ -213,6 +213,7 @@ namespace turbine_core {
                     assert(x[i] < x[i+1] && "x data must be strictly monotonously increasing.\n");
                     slope_[i] = (y_[i + 1] - y_[i]) / (x_[i + 1] - x_[i]);
                 }
+                slope_[nPoints_ - 1] = Codomain{};
 
                 isSlopeSet_ = true;
 
