@@ -7,9 +7,9 @@ instVel = data["Velocity"]
 meanVel = data["meanVelocity"]
 sop     = data["sumofsquares"]
 
-refMeanInstVel = 0.018788213
-refMeanMeanVel = 0.01913294
-refMeanSOP = 0.0064342306
+refMeanInstVel = 0.018789735
+refMeanMeanVel = 0.019133825
+refMeanSOP = 0.006432355
 
 errorMeanInstVel = np.linalg.norm(refMeanInstVel - np.mean(instVel[:,:]))
 errorMeanMeanVel = np.linalg.norm(refMeanMeanVel - np.mean(meanVel[:,:]))

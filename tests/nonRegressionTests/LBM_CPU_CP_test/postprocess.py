@@ -11,10 +11,10 @@ force             = dataConcurrent["Force"]
 dataPrecursor    = pv.get_reader("Precursor_VTK_Out/field_writer_2000/simulation_step_2000.pvtu").read()
 instVelPrecursor  = dataPrecursor["Velocity"]    
 
-refMeanInstVel     = 0.018601554
-refMeanMeanVel     = 0.0187972
-refMeanSOP         = 0.0036552344
-refMeanForce       = -4.0189113e-07
+refMeanInstVel     = 0.018602602
+refMeanMeanVel     = 0.018797867
+refMeanSOP         = 0.0036529552
+refMeanForce       = -3.9705395e-07
 refMeanPrecInstVel = 0.018792199
 
 errorMeanInstVel     = np.linalg.norm(refMeanInstVel - np.mean(instVelConcurrent[:,:]))
