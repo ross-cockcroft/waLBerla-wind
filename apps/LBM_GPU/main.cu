@@ -447,14 +447,10 @@ namespace turbine_core {
                               if(welfordIntervalOutput // && int(welfordSweepOutput.counter_)
                                  && (uint_t(welfordSweepVelocity.getCounter()) % welfordIntervalOutput == 0)){
                                   welfordSweepVelocity.setCounter(real_t(1));
-                                  // reset the field: swap pointers
-
-                                  // Take care this is called only after the VTK output, otherwise we write the wrong data in the meanVelocity output
-                                  // We live a dangerous life: we swap the velocity field counter
                                   for( auto blockIt = blocks->begin(); blockIt != blocks->end(); ++blockIt ) {
                                       auto velocityField = blockIt->getData<GPUField_T<real_t>>( velocityFieldGpuID );
                                       auto meanVelocityField = blockIt->getData<GPUField_T<real_t>>( meanVelocityFieldGpuID );
-                                      velocityField->swapDataPointers(meanVelocityField);
+                                      turbine_core::gpu::fieldCopy(meanVelocityField, velocityField);
 
                                       sopResetter(blockIt.get());
                                   }

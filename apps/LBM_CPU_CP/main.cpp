@@ -484,12 +484,10 @@ namespace turbine_core {
         concurrentTimeLoop.add() << walberla::BeforeFunction([&](){
                                      if(welfordIntervalOutput && (uint_t(welfordConcurrentSweepVelocity.getCounter()) % welfordIntervalOutput == 0)){
                                          welfordConcurrentSweepVelocity.setCounter(real_t(1));
-                                         // reset the field: swap pointers
-                                         // We live a dangerous life: we swap the velocity field counter
                                          for( auto blockIt = concurrentBlocks->begin(); blockIt != concurrentBlocks->end(); ++blockIt ) {
                                              auto velocityField = blockIt->getData<VectorField_T>( concurrentVelocityFieldID );
                                              auto meanVelocityField = blockIt->getData<VectorField_T>( concurrentMeanVelocityFieldID );
-                                             velocityField->swapDataPointers(meanVelocityField);
+                                             turbine_core::field::fieldCopy(meanVelocityField, velocityField);
 
                                              welfordConcurrentSoSResetter(blockIt.get());
                                          }

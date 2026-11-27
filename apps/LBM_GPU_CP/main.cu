@@ -603,14 +603,10 @@ namespace turbine_core {
                               if(welfordIntervalOutput // && int(welfordSweepOutput.counter_)
                                  && (uint_t(concurrentWelfordSweepVelocity.getCounter()) % welfordIntervalOutput == 0)){
                                   concurrentWelfordSweepVelocity.setCounter(real_t(1));
-                                  // reset the field: swap pointers
-
-                                  // Take care this is called only after the VTK output, otherwise we write the wrong data in the meanVelocity output
-                                  // We live a dangerous life: we swap the velocity field counter
                                   for( auto blockIt = concurrentBlocks->begin(); blockIt != concurrentBlocks->end(); ++blockIt ) {
                                       auto velocityField = blockIt->getData<walberla::gpu::GPUField<real_t>>( concurrentVelocityFieldGpuID );
                                       auto meanVelocityField = blockIt->getData<walberla::gpu::GPUField<real_t>>( concurrentMeanVelocityFieldGpuID );
-                                      velocityField->swapDataPointers(meanVelocityField);
+                                      turbine_core::gpu::fieldCopy(meanVelocityField, velocityField);
 
                                       sopResetter(blockIt.get());
                                   }
