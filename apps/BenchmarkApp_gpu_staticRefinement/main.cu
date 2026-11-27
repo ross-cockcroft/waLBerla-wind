@@ -125,9 +125,8 @@ namespace turbine_core {
         farm.setBlockForest(blocks);
         farm.initialiseForceAndControlModel();
 
-        auto domainConfig = globalConfig->getOneBlock( "DomainSetup" );
-        const bool outputSetupForest = domainConfig.getParameter<bool>("outputSetupForest");
-        const Vector3<uint_t> cellsPerBlock = domainConfig.getParameter<Vector3<uint_t>>("cellsPerBlock");
+        const bool outputSetupForest = domainSetup.outputSetupForest_;
+        const Vector3<uint_t> cellsPerBlock = domainSetup.cellsPerBlock_;
 
         //walberla::vtk::writeDomainDecomposition(blocks, "domain_decomposition", "vtk_out", "write_call", true, true, 0);
         if (outputSetupForest) {

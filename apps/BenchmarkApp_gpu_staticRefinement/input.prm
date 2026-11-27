@@ -1,7 +1,7 @@
 DomainSetup
 {
     domainSize    <128,32,32>;
-    // cellsPerBlock <16, 16, 16>;
+    cellsPerBlock <16, 16, 16>;
 
     Refinement {
 
