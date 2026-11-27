@@ -474,6 +474,9 @@ namespace turbine_core {
 
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset communication data");
 
+        for(uint_t level = 0; level < blocks->getNumberOfLevels(); ++level) { communication->communicateEqualLevel(level); }
+        for(uint_t level = 1; level < blocks->getNumberOfLevels(); ++level) { communication->communicateCoarseToFine(level); }
+
         recursiveTimestep.addRefinementToTimeLoop( timeloop );
 
         timeloop.addFuncAfterTimeStep( [&]() {

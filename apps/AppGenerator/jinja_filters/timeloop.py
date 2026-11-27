@@ -174,6 +174,8 @@ class Timeloop:
         if self.turbine_communication:
             result.append(self._add_function_nonuniform(function=("Reset communication data", finest_only("farm.callback(Component::Function::RESET_COMMUNICATION_DATA);")), is_sweep=False))
 
+        result.append(self._initial_ghost_exchange())
+
         result.append(f"\n{self.recursive_timestep_name}.addRefinementToTimeLoop( {self.name} );\n")
 
         if self.welford_output.active:
@@ -192,6 +194,11 @@ class Timeloop:
                                                                               timeloop_name=self.name))))
 
         return "\n".join(result)
+
+    @staticmethod
+    def _initial_ghost_exchange():
+        return ("for(uint_t level = 0; level < blocks->getNumberOfLevels(); ++level) { communication->communicateEqualLevel(level); }\n"
+                "for(uint_t level = 1; level < blocks->getNumberOfLevels(); ++level) { communication->communicateCoarseToFine(level); }")
 
     def _add_function_nonuniform(self, function: tuple[str, str], is_sweep: bool, only_level=None):
 
