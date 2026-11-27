@@ -124,6 +124,23 @@ namespace turbine_core {
 
             }
 
+            void addVTKFieldCalculator( const Fields::Types field, const BeforeFunction_T & fieldCalculator ) {
+
+                const auto intervals = vtkFieldIntervals_.find(field);
+                if( intervals == vtkFieldIntervals_.end() ) {
+                    return;
+                }
+
+                GenericTurbineBeforeFunctor beforeFunctor( fieldCalculator, timeloop_ );
+
+                for( const auto interval : intervals->second ) {
+                    beforeFunctor.addInterval(interval);
+                }
+
+                beforeFunctions_.emplace_back(beforeFunctor);
+
+            }
+
             inline void operator()() { write(); }
 
             void write() {
@@ -293,6 +310,9 @@ namespace turbine_core {
                     for (auto fieldIt = fieldBlock.begin(); fieldIt != fieldBlock.end(); ++fieldIt) {
 
                         const auto fieldType = Fields::toType(fieldIt->first);
+
+                        if (writeFrequency != 0)
+                            vtkFieldIntervals_[fieldType].insert(writeFrequency);
 
                         BlockDataID fieldID{};
 
@@ -497,6 +517,7 @@ namespace turbine_core {
             bool writeVTKOutput_{false};
             std::vector<VTKOutputPtr_T> fieldVTKOutput_{};
             std::set<uint_t> fieldVTKOutputInterval_{};
+            std::map<Fields::Types, std::set<uint_t>> vtkFieldIntervals_{};
 
             // line output
             bool writeLineOutput_{false};

@@ -276,7 +276,7 @@ namespace turbine_core {
         BlockDataID sumOfSquaresFieldGpuID = walberla::gpu::addGPUFieldToStorage<SecondOrderTensorField_T>( blocks, sumOfSquaresFieldCpuID, "sum of squares field GPU", true );
         BlockDataID velocityFieldGpuID = walberla::gpu::addGPUFieldToStorage<VectorField_T>( blocks, velocityFieldCpuID, "velocity field GPU", true );
         SweepCollection_T sweepCollection( blocks, densityFieldGpuID, eddyViscosityFieldGpuID, forceFieldGpuID, omegaFieldGpuID, 
-                                           pdfFieldGpuID, velocityFieldGpuID, omega );
+                                           pdfFieldGpuID, strainRateFieldGpuID, velocityFieldGpuID, omega );
 
         // for (auto& block : *blocks) {
         //     sweepCollection.initialise(&block);
@@ -407,12 +407,6 @@ namespace turbine_core {
                 fieldMap
         };
 
-        walberla::pystencils::waLBerlaWind_StrainRateWriter strainRateWriter(forceFieldGpuID, omegaFieldGpuID, pdfFieldGpuID, strainRateFieldGpuID);
-
-        turbineOutput.addMacroscopicFieldCalculator( [&]() {
-        for( auto & block : *blocks ) {
-            strainRateWriter(&block);
-        }});
         turbineOutput.addMacroscopicFieldCalculator( [&]() {
             walberla::gpu::fieldCpy<ScalarField_T, GPUField_T<real_t>>( blocks, densityFieldCpuID, densityFieldGpuID );
             walberla::gpu::fieldCpy<VectorField_T, GPUField_T<real_t>>( blocks, velocityFieldCpuID, velocityFieldGpuID );

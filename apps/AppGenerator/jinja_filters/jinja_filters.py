@@ -199,7 +199,7 @@ def generate_gpu_field_creation(field_map: set[Fields]):
     return "\n".join(result)
 
 
-def generate_sweep_collection(target: Target, field_map: set[Fields], runtime_gpu_indexing: bool):
+def generate_sweep_collection(target: Target, field_map: set[Fields], runtime_gpu_indexing: bool, vtk_output: bool):
     result = []
 
     indent = ' ' * len("SweepCollection_T sweepCollection( ")
@@ -208,7 +208,9 @@ def generate_sweep_collection(target: Target, field_map: set[Fields], runtime_gp
                   f"{(get_field_variable(Fields.EDDY_VISCOSITY, target)+', ' if Fields.EDDY_VISCOSITY in field_map else '')}"
                   f"{get_field_variable(Fields.FORCE, target)}, "
                   f"{(get_field_variable(Fields.OMEGA, target)+', ' if Fields.OMEGA in field_map else '')}")
-    result.append(f"{indent}{get_field_variable(Fields.PDF, target)}, {get_field_variable(Fields.VELOCITY, target)}, "
+    result.append(f"{indent}{get_field_variable(Fields.PDF, target)}, "
+                  f"{(get_field_variable(Fields.STRAIN_RATE, target)+', ' if vtk_output and Fields.STRAIN_RATE in field_map else '')}"
+                  f"{get_field_variable(Fields.VELOCITY, target)}, "
                   f"{'gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], ' if runtime_gpu_indexing else ''}omega );\n")
 
     result.append("// for (auto& block : *blocks) {")
@@ -374,19 +376,6 @@ def generate_communication(target: Target, grid: Grid):
     return "\n".join(result)
 
 
-def generate_tke_output(target: Target, field_map: set[Fields], vtk_output: bool, runtime_gpu_indexing: bool):
-    if not vtk_output or not Fields.STRAIN_RATE in field_map:
-        return ""
-
-    result = []
-    result.append(f"walberla::pystencils::waLBerlaWind_StrainRateWriter strainRateWriter("
-                  f"{get_field_variable(Fields.FORCE, target)}, {get_field_variable(Fields.OMEGA, target)}, "
-                  f"{get_field_variable(Fields.PDF, target)}, {get_field_variable(Fields.STRAIN_RATE, target)}"
-                  f"{', gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2]' if runtime_gpu_indexing else ''});")
-
-    return "\n".join(result)
-
-
 def generate_flow_driver(target: Target, runtime_gpu_indexing: bool):
 
     result = [f"walberla::wind::FlowDriverCollection flowDriver(blocks, &timeloop, globalConfig, domainSetup, "
@@ -401,21 +390,12 @@ def generate_output_before_functions(target: Target, vtk_output: bool, field_map
     if not vtk_output:
         return ""
 
-    tke_output = Fields.EDDY_VISCOSITY in field_map or Fields.STRAIN_RATE in field_map
-
-    if target == Target.CPU and not tke_output:
+    if target == Target.CPU:
         return ""
 
     indent = "    "
 
     result = []
-    if tke_output:
-        result.append("turbineOutput.addMacroscopicFieldCalculator( [&]() {")
-        result.append("for( auto & block : *blocks ) {")
-        if Fields.STRAIN_RATE in field_map:
-            result.append("    strainRateWriter(&block);")
-        result.append("}});")
-
     if target == Target.GPU:
         result.append("turbineOutput.addMacroscopicFieldCalculator( [&]() {")
         result.append(indent + device_to_host_field_copy(Fields.DENSITY))
@@ -569,7 +549,6 @@ def add_turbine_filters_to_jinja_env(jinja_env, jinja_globals):
     jinja_env.filters['generate_set_field_ids'] = generate_set_field_ids
     jinja_env.filters['generate_field_resetter'] = generate_field_resetter
     jinja_env.filters['generate_communication'] = generate_communication
-    jinja_env.filters['generate_tke_output'] = generate_tke_output
     jinja_env.filters['generate_output_before_functions'] = generate_output_before_functions
     jinja_env.filters['generate_shifted_periodicity'] = generate_shifted_periodicity
     jinja_env.filters['generate_flow_driver'] = generate_flow_driver

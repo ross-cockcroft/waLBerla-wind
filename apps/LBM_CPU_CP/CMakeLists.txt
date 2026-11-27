@@ -25,7 +25,6 @@ waLBerla_generate_target_from_python(
         waLBerlaWind_MacroSetter.cpp waLBerlaWind_MacroSetter.h
         waLBerlaWind_MacroGetter.cpp waLBerlaWind_MacroGetter.h
         waLBerlaWind_EddyViscosityWriter.cpp waLBerlaWind_EddyViscosityWriter.h
-        waLBerlaWind_StrainRateWriter.cpp waLBerlaWind_StrainRateWriter.h
         FlowDriverCollection.h
         Drivers.h Drivers.cpp
 )

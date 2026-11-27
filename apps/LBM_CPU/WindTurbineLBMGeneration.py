@@ -18,6 +18,7 @@ from lbmpy.relaxationrates import *
 
 from codegen_walberla_wind import generate_flow_driver_collection
 from codegen_walberla_wind.qr_guard import guard_qr_division
+from codegen_walberla_wind.strain_rate import add_strain_rate_output
 from codegen_walberla_wind.wall_function import WallLinkWFBAdditionalDataHandler
 
 info_header = """
@@ -121,6 +122,7 @@ with CodeGeneration() as ctx:
 
     collision_rule = create_lb_collision_rule(lbm_config=lbm_config, lbm_optimisation=lbm_optimisation)
     collision_rule = guard_qr_division(collision_rule)
+    collision_rule = add_strain_rate_output(collision_rule, strain_rate_field, omega_field, density_field)
 
     lb_method = collision_rule.method
 
@@ -193,21 +195,6 @@ with CodeGeneration() as ctx:
         omega_field.center @= lattice_viscosity_from_relaxation_rate(omega_field.center) - lattice_viscosity_from_relaxation_rate(omega)
 
     generate_sweep(ctx, "waLBerlaWind_EddyViscosityWriter", ps.AssignmentCollection(eddy_viscosity_writer))
-
-    # f_neq, rho, second_order_neq_moments, strain_rate = sp.symbols("f_neq rho pi_neq S_ij")
-    # strain rate writer
-    @ps.kernel
-    def strain_rate_writer():
-        f_neq = sp.Matrix(pdfs.center_vector) - lb_method.get_equilibrium_terms()
-        rho = lb_method.conserved_quantity_computation.density_symbol
-        strain_rate_field.center_vector @= - 3 * omega_field.center / (2 * rho) * second_order_moment_tensor(f_neq, lb_method.stencil)
-
-    strain_rate_ac = ps.AssignmentCollection(
-        [lb_method.conserved_quantity_computation.equilibrium_input_equations_from_pdfs(pdfs.center_vector),
-         *strain_rate_writer]
-    )
-
-    generate_sweep(ctx, "waLBerlaWind_StrainRateWriter", strain_rate_ac)
 
     ### FLOW DRIVERS
     generate_flow_driver_collection(ctx, "FlowDriverCollection", force_field=force_field, velocity_field=velocity_field,

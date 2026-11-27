@@ -198,7 +198,7 @@ namespace turbine_core {
         {% if target == Target.GPU and runtime_gpu_indexing -%}
         Vector3 <int32_t> gpuBlockSize = parameters.getParameter<Vector3<int32_t>>("gpuBlockSize", Vector3<int32_t>(256, 1, 1));
         {% endif -%}
-        {{target|generate_sweep_collection(field_map, runtime_gpu_indexing)|indent(8)}}
+        {{target|generate_sweep_collection(field_map, runtime_gpu_indexing, vtk_output)|indent(8)}}
 
         /// BOUNDARIES
 
@@ -300,8 +300,6 @@ namespace turbine_core {
                 globalConfig->getOneBlock("Output"), FluidFlagUID,
                 fieldMap
         };
-
-        {{target|generate_tke_output(field_map, vtk_output, runtime_gpu_indexing)|indent(8)}}
 
         {{target|generate_output_before_functions(vtk_output,field_map)|indent(8)}}
 

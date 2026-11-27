@@ -252,7 +252,7 @@ namespace turbine_core {
             }
         }
 
-        SweepCollection_T sweepCollection( blocks, densityFieldID, forceFieldID, nutFieldID, pdfFieldID, velocityFieldID, omega );
+        SweepCollection_T sweepCollection( blocks, densityFieldID, forceFieldID, nutFieldID, pdfFieldID, strainRateFieldID, velocityFieldID, omega );
 
         WALBERLA_MPI_BARRIER()
         WALBERLA_LOG_INFO_ON_ROOT("Initialisation done")
@@ -350,14 +350,6 @@ namespace turbine_core {
                 globalConfig->getOneBlock("Output"), FluidFlagUID,
                 fieldMap
         };
-
-        //FIXME the current implementation expects the omega field, not the nu_t field. Strain rate writer must be called BEFORE eddy viscosity writer
-
-        walberla::pystencils::waLBerlaWind_StrainRateWriter strainRateWriter(forceFieldID, nutFieldID, pdfFieldID, strainRateFieldID);
-        turbineOutput.addBeforeFunction( [&]() {
-            for( auto & block : *blocks ) {
-                strainRateWriter(&block);
-            }});
 
         walberla::pystencils::waLBerlaWind_EddyViscosityWriter eddyViscosityWriter(nutFieldID, omega);
         turbineOutput.addBeforeFunction( [&]() {

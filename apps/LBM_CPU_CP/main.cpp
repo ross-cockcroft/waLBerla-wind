@@ -161,6 +161,7 @@ namespace turbine_core {
         BlockDataID precursorVelocityFieldID = walberla::field::addToStorage<VectorField_T>(precursorBlocks, "precursor velocity field", real_t(0), layout, fieldGhostLayers);
         BlockDataID precursorFlagFieldID = walberla::field::addFlagFieldToStorage<FlagField_T>(precursorBlocks, "precursor flag field", fieldGhostLayers);
         BlockDataID precursorDummyNutFieldID = walberla::field::addToStorage<ScalarField_T>(precursorBlocks, "precursor eddy viscosity field", real_t(0), layout, fieldGhostLayers);
+        BlockDataID precursorDummyStrainRateFieldID = walberla::field::addToStorage<SecondOrderTensorField_T>(precursorBlocks, "precursor strain rate field", real_t(0), layout, fieldGhostLayers);
 
         // WARNING: the concurrent domain does not get an additional meanVelcityFieldWBF but uses the one from the precursor.
         // This needs to be kept in mind
@@ -280,8 +281,8 @@ namespace turbine_core {
             }
         }
 
-        SweepCollection_T precursorSweepCollection ( precursorBlocks, precursorDensityFieldID, precursorForceFieldID, precursorDummyNutFieldID, precursorPdfFieldID, precursorVelocityFieldID, omega );
-        SweepCollection_T concurrentSweepCollection( concurrentBlocks, concurrentDensityFieldID, concurrentForceFieldID, concurrentNutFieldID, concurrentPdfFieldID, concurrentVelocityFieldID, omega );
+        SweepCollection_T precursorSweepCollection ( precursorBlocks, precursorDensityFieldID, precursorForceFieldID, precursorDummyNutFieldID, precursorPdfFieldID, precursorDummyStrainRateFieldID, precursorVelocityFieldID, omega );
+        SweepCollection_T concurrentSweepCollection( concurrentBlocks, concurrentDensityFieldID, concurrentForceFieldID, concurrentNutFieldID, concurrentPdfFieldID, concurrentStrainRateFieldID, concurrentVelocityFieldID, omega );
 
         WALBERLA_MPI_BARRIER()
         WALBERLA_LOG_INFO_ON_ROOT("Initialisation done")
@@ -440,14 +441,6 @@ namespace turbine_core {
             globalConfig->getOneBlock("PrecursorOutput"), FluidFlagUID,
             precursorFieldMap
         };
-
-        //FIXME the current implementation expects the omega field, not the nu_t field. Strain rate writer must be called BEFORE eddy viscosity writer
-
-        walberla::pystencils::waLBerlaWind_StrainRateWriter strainRateWriter(concurrentForceFieldID, concurrentNutFieldID, concurrentPdfFieldID, concurrentStrainRateFieldID);
-        concurrentTurbineOutput.addBeforeFunction( [&]() {
-            for( auto & block : *concurrentBlocks ) {
-                strainRateWriter(&block);
-            }});
 
         walberla::pystencils::waLBerlaWind_EddyViscosityWriter eddyViscosityWriter(concurrentNutFieldID, omega);
         concurrentTurbineOutput.addBeforeFunction( [&]() {

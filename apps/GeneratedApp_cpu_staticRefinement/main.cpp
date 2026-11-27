@@ -265,7 +265,7 @@ namespace turbine_core {
         }
 
         SweepCollection_T sweepCollection( blocks, densityFieldCpuID, eddyViscosityFieldCpuID, forceFieldCpuID, omegaFieldCpuID, 
-                                           pdfFieldCpuID, velocityFieldCpuID, omega );
+                                           pdfFieldCpuID, strainRateFieldCpuID, velocityFieldCpuID, omega );
 
         // for (auto& block : *blocks) {
         //     sweepCollection.initialise(&block);
@@ -382,12 +382,7 @@ namespace turbine_core {
                 fieldMap
         };
 
-        walberla::pystencils::waLBerlaWind_StrainRateWriter strainRateWriter(forceFieldCpuID, omegaFieldCpuID, pdfFieldCpuID, strainRateFieldCpuID);
-
-        turbineOutput.addMacroscopicFieldCalculator( [&]() {
-        for( auto & block : *blocks ) {
-            strainRateWriter(&block);
-        }});
+        
 
         
 

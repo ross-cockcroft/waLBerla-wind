@@ -55,7 +55,6 @@ waLBerla_generate_target_from_python(
         waLBerlaWind_MacroGetter.cpp waLBerlaWind_MacroGetter.h
         {%- endif %}
         {% if vtk_output and Fields.STRAIN_RATE in field_map -%}
-        waLBerlaWind_StrainRateWriter.{{cmake_extension}} waLBerlaWind_StrainRateWriter.h
         {% if Fields.MEAN_STRAIN_RATE in field_map -%}
         waLBerlaWind_{{welford_strain_rate_name}}.{{cmake_extension}} waLBerlaWind_{{welford_strain_rate_name}}.h
         {%- endif %}

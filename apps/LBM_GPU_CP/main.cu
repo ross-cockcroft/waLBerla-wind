@@ -185,6 +185,7 @@ namespace turbine_core {
         BlockDataID precursorVelocityFieldCpuID = walberla::field::addToStorage<VectorField_T>(precursorBlocks, "Precursor velocity field CPU", real_t(0), layout, fieldGhostLayers);
         BlockDataID precursorForceFieldCpuID    = walberla::field::addToStorage<VectorField_T>(precursorBlocks, "Precursor force field CPU", real_t(0), layout, fieldGhostLayers);
         BlockDataID precursorDummyNutFieldCpuID = walberla::field::addToStorage<ScalarField_T>(precursorBlocks, "Precursor eddy viscosity field CPU", real_t(0), layout, fieldGhostLayers);
+        BlockDataID precursorDummyStrainRateFieldCpuID = walberla::field::addToStorage<SecondOrderTensorField_T>(precursorBlocks, "Precursor strain rate field CPU", real_t(0), layout, fieldGhostLayers);
         BlockDataID precursorFlagFieldCpuID = walberla::field::addFlagFieldToStorage<FlagField_T>(precursorBlocks, "Precursor flag field", fieldGhostLayers);
         BlockDataID precursorDummySumOfSquaresFieldCpuID = walberla::field::addToStorage<SecondOrderTensorField_T>(precursorBlocks, "Precursor sum of squares field CPU", real_t(0), layout, fieldGhostLayers);
 
@@ -327,6 +328,7 @@ namespace turbine_core {
 
         BlockDataID precursorVelocityFieldGpuID = walberla::gpu::addGPUFieldToStorage<VectorField_T >( precursorBlocks, precursorVelocityFieldCpuID, "velocity field GPU", true );
         BlockDataID precursorDummyNutFieldGpuID = walberla::gpu::addGPUFieldToStorage<ScalarField_T >( precursorBlocks, precursorDummyNutFieldCpuID, "nut field GPU", true );
+        BlockDataID precursorDummyStrainRateFieldGpuID = walberla::gpu::addGPUFieldToStorage<SecondOrderTensorField_T >( precursorBlocks, precursorDummyStrainRateFieldCpuID, "strain rate field GPU", true );
 
         BlockDataID concurrentPdfFieldGpuID = walberla::lbm_generated::addGPUPdfFieldToStorage<PdfField_T, StorageSpecification_T >(concurrentBlocks, concurrentPdfFieldCpuID, storageSpec, "pdf field");
         BlockDataID concurrentDensityFieldGpuID = walberla::gpu::addGPUFieldToStorage<ScalarField_T >( concurrentBlocks, concurrentDensityFieldCpuID, "density field GPU", true );
@@ -338,8 +340,8 @@ namespace turbine_core {
         BlockDataID concurrentSumOfSquaresFieldGpuID = walberla::gpu::addGPUFieldToStorage<SecondOrderTensorField_T >(concurrentBlocks, concurrentSumOfSquaresFieldCpuID, "sumO of squares field GPU", true );
 
         Vector3 <int32_t> gpuBlockSize = parameters.getParameter<Vector3<int32_t>>("gpuBlockSize", Vector3<int32_t>(256, 1, 1));
-        SweepCollection_T precursorSweepCollection( precursorBlocks, precursorDensityFieldGpuID, precursorForceFieldGpuID, precursorDummyNutFieldGpuID, precursorPdfFieldGpuID, precursorVelocityFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], omega );
-        SweepCollection_T concurrentSweepCollection( concurrentBlocks, concurrentDensityFieldGpuID, concurrentForceFieldGpuID, concurrentNutFieldGpuID, concurrentPdfFieldGpuID, concurrentVelocityFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], omega );
+        SweepCollection_T precursorSweepCollection( precursorBlocks, precursorDensityFieldGpuID, precursorForceFieldGpuID, precursorDummyNutFieldGpuID, precursorPdfFieldGpuID, precursorDummyStrainRateFieldGpuID, precursorVelocityFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], omega );
+        SweepCollection_T concurrentSweepCollection( concurrentBlocks, concurrentDensityFieldGpuID, concurrentForceFieldGpuID, concurrentNutFieldGpuID, concurrentPdfFieldGpuID, concurrentStrainRateFieldGpuID, concurrentVelocityFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], omega );
 
         WALBERLA_MPI_BARRIER()
         WALBERLA_LOG_INFO_ON_ROOT("Initialisation done")
@@ -536,9 +538,6 @@ namespace turbine_core {
             precursorFieldMap
         };
 
-        //FIXME the current implementation expects the omega field, not the nu_t field. Strain rate writer must be called BEFORE eddy viscosity writer
-        //eddy viscosity and strainRate computation will be done on the CPU side
-        walberla::pystencils::waLBerlaWind_StrainRateWriter strainRateWriter(concurrentForceFieldGpuID, concurrentNutFieldGpuID, concurrentPdfFieldGpuID, concurrentStrainRateFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2]);
         walberla::pystencils::waLBerlaWind_EddyViscosityWriter eddyViscosityWriter(concurrentNutFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], omega);
 
         // getter sweep for output
@@ -554,6 +553,11 @@ namespace turbine_core {
             walberla::gpu::fieldCpy<VectorField_T , GPUField_T<real_t> >( concurrentBlocks, concurrentMeanVelocityFieldCpuID, concurrentMeanVelocityFieldGpuID );
             walberla::gpu::fieldCpy<SecondOrderTensorField_T , GPUField_T<real_t> >(concurrentBlocks, concurrentSumOfSquaresFieldCpuID, concurrentSumOfSquaresFieldGpuID );
 
+            gpuDeviceSynchronize();
+        });
+
+        concurrentTurbineOutput.addVTKFieldCalculator(output::Fields::STRAIN_RATE, [&]() {
+            walberla::gpu::fieldCpy<SecondOrderTensorField_T , GPUField_T<real_t> >(concurrentBlocks, concurrentStrainRateFieldCpuID, concurrentStrainRateFieldGpuID );
             gpuDeviceSynchronize();
         });
 

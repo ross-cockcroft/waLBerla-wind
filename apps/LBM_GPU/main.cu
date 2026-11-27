@@ -282,7 +282,7 @@ namespace turbine_core {
 
         Vector3 <int32_t> gpuBlockSize = parameters.getParameter<Vector3<int32_t>>("gpuBlockSize", Vector3<int32_t>(256, 1, 1));
         SweepCollection_T sweepCollection(blocks, densityFieldGpuID, forceFieldGpuID, nutFieldGpuID, pdfFieldGpuID,
-                                          velocityFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], omega);
+                                          strainRateFieldGpuID, velocityFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], omega);
 
         WALBERLA_MPI_BARRIER()
         WALBERLA_LOG_INFO_ON_ROOT("Initialisation done")
@@ -396,10 +396,6 @@ namespace turbine_core {
                 fieldMap
         };
 
-        //FIXME the current implementation expects the omega field, not the nu_t field. Strain rate writer must be called BEFORE eddy viscosity writer
-        //eddy viscosity and strainRate computation will be done on the CPU side
-
-        walberla::pystencils::waLBerlaWind_StrainRateWriter strainRateWriter(forceFieldGpuID, nutFieldGpuID, pdfFieldGpuID, strainRateFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2]);
         walberla::pystencils::waLBerlaWind_EddyViscosityWriter eddyViscosityWriter(nutFieldGpuID, gpuBlockSize[0], gpuBlockSize[1], gpuBlockSize[2], omega);
 
         // getter sweep for output
@@ -420,6 +416,11 @@ namespace turbine_core {
 //                //    eddyViscosityWriter(&block);
 //            }
 
+            gpuDeviceSynchronize();
+        });
+
+        turbineOutput.addVTKFieldCalculator(output::Fields::STRAIN_RATE, [&]() {
+            walberla::gpu::fieldCpy<SecondOrderTensorField_T , GPUField_T<real_t> >(blocks, strainRateFieldCpuID, strainRateFieldGpuID );
             gpuDeviceSynchronize();
         });
 

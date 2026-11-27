@@ -35,7 +35,6 @@ waLBerla_generate_target_from_python(
         waLBerlaWind_WelfordEddyViscosity.${source_extension} waLBerlaWind_WelfordEddyViscosity.h
         waLBerlaWind_PdfSetter.cpp waLBerlaWind_PdfSetter.h
         waLBerlaWind_MacroGetter.cpp waLBerlaWind_MacroGetter.h
-        waLBerlaWind_StrainRateWriter.${source_extension} waLBerlaWind_StrainRateWriter.h
         waLBerlaWind_WelfordStrainRate.${source_extension} waLBerlaWind_WelfordStrainRate.h
         FlowDriverCollection.h
         Drivers.h Drivers.${source_extension}

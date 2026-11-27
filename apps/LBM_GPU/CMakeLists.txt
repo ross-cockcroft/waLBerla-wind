@@ -34,7 +34,6 @@ waLBerla_generate_target_from_python(
         waLBerlaWind_MacroGetter.cpp waLBerlaWind_MacroGetter.h
         waLBerlaWind_PdfPackInfo.${generate_extension} waLBerlaWind_PdfPackInfo.h
         waLBerlaWind_EddyViscosityWriter.${generate_extension} waLBerlaWind_EddyViscosityWriter.h
-        waLBerlaWind_StrainRateWriter.${generate_extension} waLBerlaWind_StrainRateWriter.h
         FlowDriverCollection.h
         Drivers.h Drivers.${generate_extension}
 )

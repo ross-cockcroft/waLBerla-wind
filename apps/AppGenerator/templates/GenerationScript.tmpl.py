@@ -30,6 +30,7 @@ from lbmpy.relaxationrates import *
 
 from codegen_walberla_wind import generate_flow_driver_collection
 from codegen_walberla_wind.qr_guard import guard_qr_division
+from codegen_walberla_wind.strain_rate import add_strain_rate_output
 from codegen_walberla_wind.wall_function import WallLinkWFBAdditionalDataHandler
 
 info_header = """
@@ -179,6 +180,9 @@ with CodeGeneration() as ctx:
 
     collision_rule = create_lb_collision_rule(lbm_config=lbm_config, lbm_optimisation=lbm_optimisation)
     collision_rule = guard_qr_division(collision_rule)
+    {% if vtk_output and Fields.STRAIN_RATE in field_map -%}
+    collision_rule = add_strain_rate_output(collision_rule, strain_rate_field, omega_field, density_field)
+    {% endif -%}
     {% if target == Target.GPU -%}
     collision_rule = insert_fast_divisions(collision_rule)
     collision_rule = insert_fast_sqrts(collision_rule)
@@ -310,25 +314,6 @@ with CodeGeneration() as ctx:
     outflow = lbm_boundary_generator(class_name='waLBerlaWind_Outflow', flag_uid=outflow_uid,
                                      boundary_object=outflow_bc,
                                      additional_data_handler=OutflowAdditionalDataHandler(lb_method.stencil, outflow_bc, target=target))
-
-    {% if vtk_output -%}
-    {% if Fields.STRAIN_RATE in field_map %}
-    # strain rate writer
-    @ps.kernel
-    def strain_rate_writer():
-        f_neq = sp.Matrix(pdfs.center_vector) - lb_method.get_equilibrium_terms()
-        rho = lb_method.conserved_quantity_computation.density_symbol
-        strain_rate_field.center_vector @= - 3 * omega_field.center / (2 * rho) * second_order_moment_tensor(f_neq, lb_method.stencil)
-
-    strain_rate_ac = ps.AssignmentCollection(
-        [lb_method.conserved_quantity_computation.equilibrium_input_equations_from_pdfs(pdfs.center_vector),
-         *strain_rate_writer]
-    )
-
-    generate_sweep(ctx, "waLBerlaWind_StrainRateWriter", strain_rate_ac, target=target{%- if target == Target.GPU %},
-                   gpu_indexing_params=gpu_indexing_params, max_threads=max_threads{%- endif %})
-    {% endif -%}
-    {% endif -%}
 
     {# take care of refinement scaling #}
 
