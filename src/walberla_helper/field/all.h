@@ -19,6 +19,7 @@
 
 #ifdef WALBERLA_BUILD_WITH_GPU_SUPPORT
     #include "walberla_helper/field/FieldCopyGPU.h"
+    #include "walberla_helper/field/GpuStabilityChecker.h"
 #endif
 
 

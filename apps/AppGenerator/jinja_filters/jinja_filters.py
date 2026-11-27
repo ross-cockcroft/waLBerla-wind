@@ -442,7 +442,11 @@ def generate_output_before_functions(target: Target, vtk_output: bool, field_map
     return "\n".join(result)
 
 
-def generate_stability_checker():
+def generate_stability_checker(target: Target = Target.CPU):
+    if target == Target.GPU:
+        return (f"turbine_core::gpu::makeDensityStabilityChecker< {get_field_type(Fields.DENSITY)}, GPUField_T<real_t>, {get_field_type(Fields.FLAG)} >"
+                f"(globalConfig, blocks, {get_field_variable(Fields.DENSITY, Target.CPU)}, {get_field_variable(Fields.DENSITY, Target.GPU)}, "
+                f"{get_field_variable(Fields.FLAG)}, FluidFlagUID, \"\")")
     return (f"walberla::makeSharedFunctor( walberla::field::makeStabilityChecker< {get_field_type(Fields.PDF)}, "
             f"{get_field_type(Fields.FLAG)} >(globalConfig, blocks, {get_field_variable(Fields.PDF, Target.CPU)}, {get_field_variable(Fields.FLAG)}, FluidFlagUID ))")
 

@@ -514,7 +514,7 @@ namespace turbine_core {
 
 
         // LBM stability check
-        timeloop.addFuncAfterTimeStep( walberla::makeSharedFunctor( walberla::field::makeStabilityChecker< PdfField_T, FlagField_T >(globalConfig, blocks, pdfFieldCpuID, flagFieldID, FluidFlagUID )), "LBM stability check" );
+        timeloop.addFuncAfterTimeStep( turbine_core::gpu::makeDensityStabilityChecker< ScalarField_T, GPUField_T<real_t>, FlagField_T >(globalConfig, blocks, densityFieldCpuID, densityFieldGpuID, flagFieldID, FluidFlagUID, ""), "LBM stability check" );
 
         // log remaining time
         timeloop.addFuncAfterTimeStep( walberla::timing::RemainingTimeLogger( timeloop.getNrOfTimeSteps(), remainingTimeLoggerFrequency ), "Remaining time logger" );

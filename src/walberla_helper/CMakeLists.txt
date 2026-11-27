@@ -43,5 +43,6 @@ if( WALBERLA_BUILD_WITH_GPU_SUPPORT )
     target_sources( walberla_helper
             PRIVATE
             field/FieldCopyGPU.h
+            field/GpuStabilityChecker.h
     )
 endif()

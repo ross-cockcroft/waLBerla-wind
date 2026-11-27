@@ -640,7 +640,7 @@ namespace turbine_core {
                        }, "ResetCommunicationData" );
 
         // LBM stability check
-        concurrentTimeLoop.addFuncAfterTimeStep( walberla::makeSharedFunctor( walberla::field::makeStabilityChecker< PdfField_T, FlagField_T >(globalConfig, concurrentBlocks, concurrentPdfFieldCpuID, concurrentFlagFieldCpuID, FluidFlagUID ) ),
+        concurrentTimeLoop.addFuncAfterTimeStep( turbine_core::gpu::makeDensityStabilityChecker< ScalarField_T, walberla::gpu::GPUField<real_t>, FlagField_T >(globalConfig, concurrentBlocks, concurrentDensityFieldCpuID, concurrentDensityFieldGpuID, concurrentFlagFieldCpuID, FluidFlagUID, "concurrent" ),
                                        "Concurrent LBM stability check" );
 
 
@@ -674,7 +674,7 @@ namespace turbine_core {
 
         precursorTimeLoop.addFuncAfterTimeStep( walberla::timing::RemainingTimeLogger( precursorTimeLoop.getNrOfTimeSteps(), remainingTimeLoggerFrequency ), "Precursor remaining time logger" );
 
-        precursorTimeLoop.addFuncAfterTimeStep( walberla::makeSharedFunctor( walberla::field::makeStabilityChecker< PdfField_T, FlagField_T >(globalConfig, precursorBlocks, precursorPdfFieldCpuID, precursorFlagFieldCpuID, FluidFlagUID ) ),
+        precursorTimeLoop.addFuncAfterTimeStep( turbine_core::gpu::makeDensityStabilityChecker< ScalarField_T, walberla::gpu::GPUField<real_t>, FlagField_T >(globalConfig, precursorBlocks, precursorDensityFieldCpuID, precursorDensityFieldGpuID, precursorFlagFieldCpuID, FluidFlagUID, "precursor" ),
                                        "Precursor LBM stability check" );
 
         WALBERLA_LOG_INFO_ON_ROOT("Running timeloop...")

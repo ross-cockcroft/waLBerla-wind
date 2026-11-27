@@ -323,7 +323,7 @@ namespace turbine_core {
         {{timeloop.add_to_timeloop()|indent(8)}}
 
         // LBM stability check
-        {{timeloop.add_after_timestep(function=("LBM stability check", generate_stability_checker()))|indent(8)}}
+        {{timeloop.add_after_timestep(function=("LBM stability check", generate_stability_checker(target)))|indent(8)}}
 
         // log remaining time
         {{timeloop.add_after_timestep(function=("Remaining time logger", timeloop.remaining_time_logger()))|indent(8)}}
