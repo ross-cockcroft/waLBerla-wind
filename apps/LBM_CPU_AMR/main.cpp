@@ -411,15 +411,15 @@ namespace turbine_core {
         LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) { if (level != 0) return; for (auto &block: *blocks) { welfordLambdaVelocity(&block); }}, "Welford Output Sweep");
 
         // turbine handling
-        LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
-        LBMMeshRefinement.addPostCollisionFunction( [&](uint_t level) {
+        LBMMeshRefinement.addPostBoundaryHandlingFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
+        LBMMeshRefinement.addPostBoundaryHandlingFunction( [&](uint_t level) {
             if(level != blocks->getDepth()) return;
             std::vector<walberla::Block*> blocksOnLevel;
             blocks->getBlocks(blocksOnLevel, level);
             for (auto block: blocksOnLevel) { evaluateDensityAndVelocity(block); }
         }, "Evaluate density and velocity");
-        LBMMeshRefinement.addPostCollisionFunction(syncMacros, "Communicate macroscopic turbine data");
-        LBMMeshRefinement.addPostCollisionFunction(applyControl, "Apply Control");
+        LBMMeshRefinement.addPostBoundaryHandlingFunction(syncMacros, "Communicate macroscopic turbine data");
+        LBMMeshRefinement.addPostBoundaryHandlingFunction(applyControl, "Apply Control");
         LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) {
             //FIXME this does not take into account force scaling during refinement ?
             std::vector<walberla::Block*> blocksOnLevel;
@@ -429,15 +429,15 @@ namespace turbine_core {
                 forceField->setWithGhostLayer(std::vector<real_t>({pressure_gradient, real_t(0.0), real_t(0.0)}));
             }
         }, "Setting driving force");
-        LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::CALCULATE_FORCES); }, "Calculate forces");
-        LBMMeshRefinement.addPostCollisionFunction(syncForces, "Communicate force data");
-        LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) {
+        LBMMeshRefinement.addPostBoundaryHandlingFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::CALCULATE_FORCES); }, "Calculate forces");
+        LBMMeshRefinement.addPostBoundaryHandlingFunction(syncForces, "Communicate force data");
+        LBMMeshRefinement.addPostBoundaryHandlingFunction([&](uint_t level) {
             if(level != blocks->getDepth()) return;
             std::vector<walberla::Block*> blocksOnLevel;
             blocks->getBlocks(blocksOnLevel, level);
             for (auto block: blocksOnLevel) { spreadForces(block); }
         }, "Spread forces");
-        LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) {
+        LBMMeshRefinement.addPostBoundaryHandlingFunction([&](uint_t level) {
             if(level != blocks->getDepth()) return;
             farm.callback(Component::Function::RESET_COMMUNICATION_DATA);
         }, "Reset communication data");

@@ -427,8 +427,7 @@ namespace turbine_core {
             welfordSweepVelocity(block);
         };
 
-        timeloop.add() << walberla::BeforeFunction( communication.getCommunicateFunctor(), "field communication" )
-                       << walberla::BeforeFunction( [&boundarySetup, &shiftedPeriodicity]() {
+        timeloop.add() << walberla::BeforeFunction( [&boundarySetup, &shiftedPeriodicity]() {
                                            if( boundarySetup.inflowType() == InflowSetup::ShiftedPeriodic )
                                                shiftedPeriodicity();
                                       }, "Shifted periodicity" )
@@ -456,7 +455,8 @@ namespace turbine_core {
                           }, "welford sweep")
                        << walberla::Sweep(welfordLambdaVelocity, "welford sweep");
 
-        timeloop.add() << walberla::BeforeFunction( [&]() {
+        timeloop.add() << walberla::BeforeFunction( communication.getCommunicateFunctor(), "field communication" )
+                       << walberla::BeforeFunction( [&]() {
                               farm.callback(Component::Function::UPDATE_DISCRETISATION);
                           }, "Rotation" )
                        << walberla::Sweep( evaluateDensityAndVelocity, "Evaluate density and velocity", sets::turbineSelector() )

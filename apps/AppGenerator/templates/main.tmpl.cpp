@@ -327,6 +327,10 @@ namespace turbine_core {
         // log remaining time
         {{timeloop.add_after_timestep(function=("Remaining time logger", timeloop.remaining_time_logger()))|indent(8)}}
 
+        {% if grid.is_uniform() -%}
+        communication->communicate();
+
+        {% endif -%}
         WALBERLA_LOG_INFO_ON_ROOT("Running timeloop...")
 
         WALBERLA_MPI_WORLD_BARRIER()

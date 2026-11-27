@@ -435,8 +435,8 @@ namespace turbine_core {
         	blocks, pdfFieldGpuID, sweepCollection, boundaryCollection, communication, pdfPackInfo );
 
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level!=0) return; turbineOutput.write(); }, "VTK output");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
+        recursiveTimestep.addPostBoundaryHandlingFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
+        recursiveTimestep.addPostBoundaryHandlingFunction([&](uint_t level) {
         if(level != blocks->getDepth()) return;
         std::vector<walberla::Block* > blocksOnLevel;
         blocks->getBlocks(blocksOnLevel, level);
@@ -444,8 +444,8 @@ namespace turbine_core {
         	farm.evaluateDensityAndVelocity(block);
         }}, "Evaluate density and velocity");
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false); }, "Communicate macroscopic turbine data");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.applyControl(); }, "Apply Control");
+        recursiveTimestep.addPostBoundaryHandlingFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false); }, "Communicate macroscopic turbine data");
+        recursiveTimestep.addPostBoundaryHandlingFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.applyControl(); }, "Apply Control");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
         std::vector<walberla::Block* > blocksOnLevel;
         blocks->getBlocks(blocksOnLevel, level);
@@ -453,9 +453,9 @@ namespace turbine_core {
         	flowDriver(block);
         }}, "Setting driving force");
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback( Component::Function::CALCULATE_FORCES ); }, "Calculate forces");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false); }, "Communicate force data");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
+        recursiveTimestep.addPostBoundaryHandlingFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback( Component::Function::CALCULATE_FORCES ); }, "Calculate forces");
+        recursiveTimestep.addPostBoundaryHandlingFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false); }, "Communicate force data");
+        recursiveTimestep.addPostBoundaryHandlingFunction([&](uint_t level) {
         if(level != blocks->getDepth()) return;
         std::vector<walberla::Block* > blocksOnLevel;
         blocks->getBlocks(blocksOnLevel, level);
@@ -463,7 +463,7 @@ namespace turbine_core {
         	farm.spreadForces(block);
         }}, "Spread forces");
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset communication data");
+        recursiveTimestep.addPostBoundaryHandlingFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset communication data");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != 0) return;
         {	if(welfordInterval && (uint_t(welfordOutputSweep.getCounter()) % welfordInterval == 0)){
         		welfordOutputSweep.setCounter(real_t(1));

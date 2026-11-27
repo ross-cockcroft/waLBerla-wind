@@ -431,8 +431,7 @@ namespace turbine_core {
             welfordStrainRateSweep(block);
         };
 
-        timeloop.add() << walberla::BeforeFunction(communication->getCommunicateFunctor(), "Field communication")
-                       << walberla::BeforeFunction([&boundarySetup, &shiftedPeriodicity]() { if( boundarySetup.inflowType() == InflowSetup::ShiftedPeriodic ) shiftedPeriodicity(); }, "Shifted periodicity")
+        timeloop.add() << walberla::BeforeFunction([&boundarySetup, &shiftedPeriodicity]() { if( boundarySetup.inflowType() == InflowSetup::ShiftedPeriodic ) shiftedPeriodicity(); }, "Shifted periodicity")
                        << walberla::Sweep(boundaryCollection.getSweep(), "Boundary Handling");
 
         timeloop.add() << walberla::Sweep(sweepCollection.streamCollide(), "LBM stream-collide")
@@ -482,7 +481,8 @@ namespace turbine_core {
                            }, "WelfordStrainRate Sweep")
                        << walberla::Sweep(welfordStrainRateLambda, "WelfordStrainRate Sweep");
 
-        timeloop.add() << walberla::BeforeFunction([&]() { farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation")
+        timeloop.add() << walberla::BeforeFunction(communication->getCommunicateFunctor(), "Field communication")
+                       << walberla::BeforeFunction([&]() { farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation")
                        << walberla::Sweep(evaluateDensityAndVelocity, "Evaluate density and velocity")
                        << walberla::AfterFunction(syncMacros, "Communicate macroscopic turbine data")
                        << walberla::AfterFunction(applyControl, "Apply Control");
@@ -512,6 +512,8 @@ namespace turbine_core {
 
         // log remaining time
         timeloop.addFuncAfterTimeStep( walberla::timing::RemainingTimeLogger( timeloop.getNrOfTimeSteps(), remainingTimeLoggerFrequency ), "Remaining time logger" );
+
+        communication->communicate();
 
         WALBERLA_LOG_INFO_ON_ROOT("Running timeloop...")
 

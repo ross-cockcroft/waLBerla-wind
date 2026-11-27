@@ -65,8 +65,7 @@ class Timeloop:
         result = []
 
         result.append(self._add_sweep_uniform(sweep=("Boundary Handling", "boundaryCollection.getSweep()"),
-                                              before_fcts=[{"Field communication": "communication->getCommunicateFunctor()"},
-                                                           {"Shifted periodicity": "[&boundarySetup, &shiftedPeriodicity]() { if( boundarySetup.inflowType() == InflowSetup::ShiftedPeriodic ) shiftedPeriodicity(); }"}]))
+                                              before_fcts=[{"Shifted periodicity": "[&boundarySetup, &shiftedPeriodicity]() { if( boundarySetup.inflowType() == InflowSetup::ShiftedPeriodic ) shiftedPeriodicity(); }"}]))
 
         after_streamcollide = []
         if self.vtk_output:
@@ -92,7 +91,8 @@ class Timeloop:
         if self.generate_control:
             after_macro.append({"Apply Control": "applyControl"})
         result.append(self._add_sweep_uniform(sweep=("Evaluate density and velocity", "evaluateDensityAndVelocity"),
-                                              before_fcts=[{"Rotation": "[&]() { farm.callback(Component::Function::UPDATE_DISCRETISATION); }"}],
+                                              before_fcts=[{"Field communication": "communication->getCommunicateFunctor()"},
+                                                           {"Rotation": "[&]() { farm.callback(Component::Function::UPDATE_DISCRETISATION); }"}],
                                               after_fcts=after_macro))
 
         result.append(self._add_sweep_uniform(sweep=("Setting driving force", "flowDriver")))
@@ -155,24 +155,24 @@ class Timeloop:
         if self.vtk_output:
             result.append(self._add_function_nonuniform(function=("VTK output", "[&](uint_t level) { if(level!=0) return; turbineOutput.write(); }"), is_sweep=False))
 
-        result.append(self._add_function_nonuniform(function=("Rotation", finest_only("farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION);")), is_sweep=False))
-        result.append(self._add_function_nonuniform(function=("Evaluate density and velocity", "farm.evaluateDensityAndVelocity"), is_sweep=True, only_level=FINEST))
+        result.append(self._add_function_nonuniform(function=("Rotation", finest_only("farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION);")), is_sweep=False, post_boundary=True))
+        result.append(self._add_function_nonuniform(function=("Evaluate density and velocity", "farm.evaluateDensityAndVelocity"), is_sweep=True, only_level=FINEST, post_boundary=True))
 
         if self.turbine_communication:
-            result.append(self._add_function_nonuniform(function=("Communicate macroscopic turbine data", finest_only("farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false);")), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("Communicate macroscopic turbine data", finest_only("farm.syncNextNeighbour(mpi::SYNC_MACRO, 1, false);")), is_sweep=False, post_boundary=True))
         if self.generate_control:
-            result.append(self._add_function_nonuniform(function=("Apply Control", finest_only("farm.applyControl();")), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("Apply Control", finest_only("farm.applyControl();")), is_sweep=False, post_boundary=True))
 
         result.append(self._add_function_nonuniform(function=("Setting driving force", "flowDriver"), is_sweep=True))
-        result.append(self._add_function_nonuniform(function=("Calculate forces", finest_only("farm.callback( Component::Function::CALCULATE_FORCES );")), is_sweep=False))
+        result.append(self._add_function_nonuniform(function=("Calculate forces", finest_only("farm.callback( Component::Function::CALCULATE_FORCES );")), is_sweep=False, post_boundary=True))
 
         if self.turbine_communication:
-            result.append(self._add_function_nonuniform(function=("Communicate force data", finest_only("farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false);")), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("Communicate force data", finest_only("farm.syncNextNeighbour(mpi::SYNC_FORCE, maxKernelWidth+uint_t(real_t(diameter)/real_t(2.0)), false);")), is_sweep=False, post_boundary=True))
 
-        result.append(self._add_function_nonuniform(function=("Spread forces", "farm.spreadForces"), is_sweep=True, only_level=FINEST))
+        result.append(self._add_function_nonuniform(function=("Spread forces", "farm.spreadForces"), is_sweep=True, only_level=FINEST, post_boundary=True))
 
         if self.turbine_communication:
-            result.append(self._add_function_nonuniform(function=("Reset communication data", finest_only("farm.callback(Component::Function::RESET_COMMUNICATION_DATA);")), is_sweep=False))
+            result.append(self._add_function_nonuniform(function=("Reset communication data", finest_only("farm.callback(Component::Function::RESET_COMMUNICATION_DATA);")), is_sweep=False, post_boundary=True))
 
         welfords = [w for w in (self.welford_output, self.welford_eddy_viscosity, self.welford_strain_rate) if w.active]
         if welfords:
@@ -198,7 +198,7 @@ class Timeloop:
         return ("for(uint_t level = 0; level < blocks->getNumberOfLevels(); ++level) { communication->communicateEqualLevel(level); }\n"
                 "for(uint_t level = 1; level < blocks->getNumberOfLevels(); ++level) { communication->communicateCoarseToFine(level); }")
 
-    def _add_function_nonuniform(self, function: tuple[str, str], is_sweep: bool, only_level=None):
+    def _add_function_nonuniform(self, function: tuple[str, str], is_sweep: bool, only_level=None, post_boundary: bool=False):
 
         if not is_sweep:
             void_function = function[1]
@@ -207,7 +207,8 @@ class Timeloop:
             void_function = (f"[&](uint_t level) {{\n" + level_check + f"std::vector<walberla::Block* > blocksOnLevel;\nblocks->getBlocks(blocksOnLevel, level);\nfor (auto block: blocksOnLevel) {{\n\t{function[1]}(block);\n}}}}")
 
         nl = '\n'
-        add_string = f'{self.recursive_timestep_name}.addPostCollisionFunction({void_function}, "{function[0]}");{nl if is_sweep else ""}'
+        registration = "addPostBoundaryHandlingFunction" if post_boundary else "addPostCollisionFunction"
+        add_string = f'{self.recursive_timestep_name}.{registration}({void_function}, "{function[0]}");{nl if is_sweep else ""}'
         # add_string = f"{self.recursive_timestep_name}.addPostCollisionFunction({void_function}, \"{function[0]}\"{', ' + str(level) if not level == -1 else ''});{nl if is_sweep else ''}"
 
         return add_string

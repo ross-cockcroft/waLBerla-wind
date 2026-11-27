@@ -452,8 +452,7 @@ namespace turbine_core {
             welfordConcurrentSweepVelocity(block);
         };
 
-        concurrentTimeLoop.add() << walberla::BeforeFunction( concurrentCommunication, "Concurrent field communication" )
-                                 << walberla::Sweep( concurrentBoundaryCollection.getSweep(), "Concurrent boundary handling" )
+        concurrentTimeLoop.add() << walberla::Sweep( concurrentBoundaryCollection.getSweep(), "Concurrent boundary handling" )
                                  << walberla::AfterFunction( [&]() {
                                      auto precursorBlock = precursorBlocks->begin();
                                      for (auto concurrentBlock = concurrentBlocks->begin(); concurrentBlock != concurrentBlocks->end();
@@ -485,7 +484,8 @@ namespace turbine_core {
                                  }, "Concurrent welford sweep velocity")
                                  << walberla::Sweep(welfordLambdaVelocity, "Concurrent welford sweep velocity");
 
-        concurrentTimeLoop.add() << walberla::BeforeFunction( [&]() {farm.callback(Component::Function::UPDATE_DISCRETISATION);}, "Rotation" )
+        concurrentTimeLoop.add() << walberla::BeforeFunction( concurrentCommunication, "Concurrent field communication" )
+                                 << walberla::BeforeFunction( [&]() {farm.callback(Component::Function::UPDATE_DISCRETISATION);}, "Rotation" )
                                  << walberla::Sweep( evaluateDensityAndVelocity, "Evaluate density and velocity", sets::turbineSelector() )
                                  << walberla::AfterFunction(syncMacros, "Communicate macroscopic turbine data")
                                  << walberla::AfterFunction( applyControl , "Apply Control");
