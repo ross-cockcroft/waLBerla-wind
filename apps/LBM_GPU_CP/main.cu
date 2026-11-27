@@ -160,7 +160,7 @@ namespace turbine_core {
                      "Please change either inflow/outflow type or streaming pattern.")
         }
 
-        domain::DomainSetup precursorDomainSetup ( globalConfig, precursorBoundarySetup.periodicity() );
+        domain::DomainSetup precursorDomainSetup ( globalConfig, precursorBoundarySetup.periodicity(), {"PrecursorOutput"} );
         auto precursorBlocks = precursorDomainSetup.createUniformBlockForest(farm.getTurbineAABBs());
         domain::DomainSetup concurrentDomainSetup ( globalConfig, concurrentBoundarySetup.periodicity() );
         auto concurrentBlocks = concurrentDomainSetup.createUniformBlockForest(farm.getTurbineAABBs());

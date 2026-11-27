@@ -23,6 +23,9 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <blockforest/SetupBlockForest.h>
 #include <blockforest/StructuredBlockForest.h>
 #include <core/config/Config.h>
@@ -38,7 +41,8 @@ namespace turbine_core {
 
         struct SnapshotHandler {
 
-            explicit SnapshotHandler(std::shared_ptr<walberla::Config> & globalConfig) {
+            explicit SnapshotHandler(std::shared_ptr<walberla::Config> & globalConfig,
+                                     const std::vector<std::string> & outputBlockNames = {"Output"}) {
 
                 const auto config = globalConfig->getOneBlock("DomainSetup");
 
@@ -110,7 +114,9 @@ namespace turbine_core {
                     WALBERLA_LOG_INFO_ON_ROOT("Successfully read config parameters from snapshot config file:")
                     WALBERLA_LOG_INFO_ON_ROOT(" - startingTimestep = " << startingTimestep)
 
-                    setInitialExecutionCount(globalConfig, "Output");
+                    for(const auto & outputBlockName : outputBlockNames) {
+                        setInitialExecutionCount(globalConfig, outputBlockName);
+                    }
 
                 }
 
@@ -260,7 +266,7 @@ namespace turbine_core {
 
         private:
 
-            void setInitialExecutionCount(std::shared_ptr<walberla::Config> & globalConfig, const char * outputBlockName) const {
+            void setInitialExecutionCount(std::shared_ptr<walberla::Config> & globalConfig, const std::string & outputBlockName) const {
                 std::vector< walberla::config::Config::Block* > configOutputBlock;
                 globalConfig->getWritableGlobalBlock().getWritableBlocks(outputBlockName, configOutputBlock, 0, 1);
                 for(auto * outputBlock : configOutputBlock) {

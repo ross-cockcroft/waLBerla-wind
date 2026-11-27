@@ -83,7 +83,8 @@ namespace turbine_core {
         struct DomainSetup {
 
             explicit DomainSetup(std::shared_ptr<walberla::Config> & globalConfig,
-                                 const walberla::Vector3<bool> & periodicity, const uint_t q = 27);
+                                 const walberla::Vector3<bool> & periodicity,
+                                 const std::vector<std::string> & outputBlockNames = {"Output"}, const uint_t q = 27);
 
             friend std::ostream& operator<<(std::ostream& os, const DomainSetup& setup);
 
@@ -123,7 +124,8 @@ namespace turbine_core {
         };
 
         DomainSetup::DomainSetup(std::shared_ptr<walberla::Config> & globalConfig,
-                                 const walberla::Vector3<bool> & periodicity, const uint_t q)
+                                 const walberla::Vector3<bool> & periodicity,
+                                 const std::vector<std::string> & outputBlockNames, const uint_t q)
                 : dx_fine_(1.0), periodicity_(periodicity),
                   numberOfCoarseBlocksPerDirection_(4) {
 
@@ -157,7 +159,7 @@ namespace turbine_core {
 
             outputSetupForest_ = config.getParameter<bool>("outputSetupForest", false);
 
-            snapshotHandler_ = std::make_unique<SnapshotHandler>(globalConfig);
+            snapshotHandler_ = std::make_unique<SnapshotHandler>(globalConfig, outputBlockNames);
 
         }
 

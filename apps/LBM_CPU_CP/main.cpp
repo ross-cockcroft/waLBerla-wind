@@ -124,7 +124,7 @@ namespace turbine_core {
 
         auto precursorBoundariesConfig = globalConfig->getOneBlock( "PrecursorBoundaries" );
         domain::BoundarySetup precursorBoundarySetup(precursorBoundariesConfig);
-        domain::DomainSetup precursorDomainSetup ( globalConfig, precursorBoundarySetup.periodicity() );
+        domain::DomainSetup precursorDomainSetup ( globalConfig, precursorBoundarySetup.periodicity(), {"PrecursorOutput"} );
         auto precursorBlocks = precursorDomainSetup.createUniformBlockForest(farm.getTurbineAABBs());
 
         if (precursorBoundarySetup.inflowType() == InflowSetup::ShiftedPeriodic && codegen::KernelInfo::inplace) {
