@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <limits>
 #include <memory>
 
 #include <blockforest/StructuredBlockForest.h>
@@ -106,11 +107,7 @@ namespace walberla {
                     {% for driver_enum, driver_class in driver_classes.items() -%}
                     case turbine_core::external_forces::DriverSetup::{{driver_enum}}: {
                     {%- if driver_enum == "DynamicPressureGradient" %}
-                        auto windDirChangeRate = windDirChangeRateInterpolator_({{data_type}}({% if nonuniform %}timeloop_->getCurrentTimeStep() * (uint_t(1) << sbf_->getDepth()){% else %}timeloop_->getCurrentTimeStep(){% endif %}));
-                        {{collection_object_name}}->setWinddirectionrate(windDirChangeRate);
-                        windDirection_ += windDirChangeRate;
-                        {{collection_object_name}}->setCoswinddirection(std::cos(windDirection_));
-                        {{collection_object_name}}->setSinwinddirection(std::sin(windDirection_));
+                        updateWindDirection();
                     {%- endif %}
                         {{collection_object_name}}->{{driver_class}}(block, ghostLayers_); break; }
                     {% endfor %}
@@ -127,11 +124,7 @@ namespace walberla {
                     {% for driver_enum, driver_class in driver_classes.items() -%}
                     case turbine_core::external_forces::DriverSetup::{{driver_enum}}: {
                     {%- if driver_enum == "DynamicPressureGradient" %}
-                        auto windDirChangeRate = windDirChangeRateInterpolator_({{data_type}}({% if nonuniform %}timeloop_->getCurrentTimeStep() * (uint_t(1) << sbf_->getDepth()){% else %}timeloop_->getCurrentTimeStep(){% endif %}));
-                        {{collection_object_name}}->setWinddirectionrate(windDirChangeRate);
-                        windDirection_ += windDirChangeRate;
-                        {{collection_object_name}}->setCoswinddirection(std::cos(windDirection_));
-                        {{collection_object_name}}->setSinwinddirection(std::sin(windDirection_));
+                        updateWindDirection();
                     {%- endif %}
                         {{collection_object_name}}->{{driver_class}}CellInterval(block, globalCellInterval); break; }
                     {% endfor %}
@@ -163,6 +156,8 @@ namespace walberla {
             {% if dynamic %}
             timeloop::ITimeloop * const timeloop_{};
             {{data_type}} windDirection_{};
+            uint_t windDirectionStep_{0};
+            uint_t windDirectionUpdatedStep_{std::numeric_limits<uint_t>::max()};
             turbine_core::data_interpolation::DataInterpolator<real_t, real_t, false> windDirChangeRateInterpolator_{};
             {% endif %}
 
@@ -170,6 +165,24 @@ namespace walberla {
 
             {% if dynamic -%}
             void initialiseWindDirectionInterpolator(const std::string & tableName);
+
+            void updateWindDirection() {
+                const uint_t substeps = uint_t(1) << sbf_->getDepth();
+                const uint_t step = timeloop_->getCurrentTimeStep();
+                if (step == windDirectionUpdatedStep_) {
+                    return;
+                }
+                windDirectionUpdatedStep_ = step;
+                while (windDirectionStep_ < step) {
+                    for (uint_t k = 0; k < substeps; ++k) {
+                        windDirection_ += windDirChangeRateInterpolator_({{data_type}}(windDirectionStep_ * substeps + k));
+                    }
+                    ++windDirectionStep_;
+                }
+                {{collection_object_name}}->setWinddirectionrate(windDirChangeRateInterpolator_({{data_type}}(step * substeps)));
+                {{collection_object_name}}->setCoswinddirection(std::cos(windDirection_));
+                {{collection_object_name}}->setSinwinddirection(std::sin(windDirection_));
+            }
             {%- endif %}
 
         };
