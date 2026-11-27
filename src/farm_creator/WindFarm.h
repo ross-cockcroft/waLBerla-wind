@@ -149,20 +149,21 @@ namespace turbine_core {
                     if (turbine && needsMeanVelocity){
                         // Compute the rotor mean velocity
                         for (auto &block: *forest_) {
-                            real_t blockLocalMeanVelocity{};
+                            real_t blockLocalVelocitySum{};
                             uint_t blockNbPoints{};
-                            turbine->calculateMeanVelocity(&block, forest_, blockLocalMeanVelocity, blockNbPoints);
-                            rotorMeanWind += blockLocalMeanVelocity;
+                            turbine->calculateMeanVelocity(&block, forest_, blockLocalVelocitySum, blockNbPoints);
+                            rotorMeanWind += blockLocalVelocitySum;
                             totalPoints += blockNbPoints;
                         }
-
-                        rotorMeanWind /= real_t(totalPoints);
                     }
 
                     WALBERLA_MPI_SECTION() {
                         walberla::mpi::allReduceInplace(totalPoints, walberla::mpi::SUM);
                         walberla::mpi::allReduceInplace(rotorMeanWind, walberla::mpi::SUM);
                     }
+
+                    if (totalPoints > uint_t(0))
+                        rotorMeanWind /= real_t(totalPoints);
 
                     real_t uxWindVane = 0;
                     real_t uyWindVane = 0;
@@ -187,8 +188,12 @@ namespace turbine_core {
                         walberla::mpi::allReduceInplace(uyWindVane, walberla::mpi::SUM);
                         walberla::mpi::allReduceInplace(uzWindVane, walberla::mpi::SUM);
                     }
-                    Vector3<real_t> rotorWindVaneVelocity(uxWindVane /= real_t(totalPoints),
-                        uyWindVane /= real_t(totalPoints), uzWindVane /= real_t(totalPoints));
+                    if (totalPoints > uint_t(0)) {
+                        uxWindVane /= real_t(totalPoints);
+                        uyWindVane /= real_t(totalPoints);
+                        uzWindVane /= real_t(totalPoints);
+                    }
+                    Vector3<real_t> rotorWindVaneVelocity(uxWindVane, uyWindVane, uzWindVane);
 
                     real_t rotorTorque{0.}, rotorOmega{0.};
                     if (turbine && needsTorque){
