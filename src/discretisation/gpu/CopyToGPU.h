@@ -28,15 +28,13 @@ namespace turbine_core {
                 HOST_PREFIX CopyToGPU() {
 
                     gpuMalloc((void**)&devicePtr, sizeof(Discretisation_T*));
-                    gpuErrchk(gpuPeekAtLastError())
-                    gpuErrchk(gpuDeviceSynchronize())
+                    TURBINE_GPU_CHECK()
 
                 }
 
                 HOST_PREFIX ~CopyToGPU() {
                     deleteDiscretisationOnGPU<<<1,1>>>((Discretisation**)devicePtr);
-                    gpuErrchk(gpuPeekAtLastError())
-                    gpuErrchk(gpuDeviceSynchronize())
+                    TURBINE_GPU_CHECK()
                     gpuFree(devicePtr);
                 }
 
@@ -66,12 +64,10 @@ namespace turbine_core {
                 Disk * d_disk;
                 gpuMalloc((void**)&d_disk, sizeof(Disk));
                 gpuMemcpy(d_disk, cpuPtr.get(), sizeof(Disk), gpuMemcpyHostToDevice);
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 newDiskDiscretisationOnGPU<<<1,1>>>(cpyToGPU.devicePtr, d_disk);
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 gpuFree(d_disk);
 
@@ -82,18 +78,15 @@ namespace turbine_core {
                 Line * d_line;
                 gpuMalloc((void**)&d_line, sizeof(Line));
                 gpuMemcpy(d_line, cpuPtr.get(), sizeof(Line), gpuMemcpyHostToDevice);
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 Point3<real_t> * d_points;
                 gpuMalloc((void**)&d_points, cpuPtr->nPoints() * sizeof(Point3<real_t>));
                 gpuMemcpy(d_points, cpuPtr->points(), cpuPtr->nPoints() * sizeof(Point3<real_t>), gpuMemcpyHostToDevice);
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 newLineDiscretisationOnGPU<<<1,1>>>(cpyToGPU.devicePtr, d_line, cpuPtr->nPoints(), d_points);
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 gpuFree(d_line);
                 gpuFree(d_points);

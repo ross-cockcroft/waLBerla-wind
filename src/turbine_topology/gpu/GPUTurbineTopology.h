@@ -210,8 +210,9 @@ namespace turbine_core {
                                                              const uint_t &nComponents) {
 
 
-                    int threadsPerBlock = nPointsComponents; //npoints
-                    int numBlocks = nComponents + 1;  // number of components
+                    const int threadsPerBlock = 128;
+                    const int pointBlocks = (int(nPointsComponents) + threadsPerBlock - 1) / threadsPerBlock;
+                    dim3 numBlocks(nComponents + 1, uint_t(pointBlocks > 0 ? pointBlocks : 1));
 
                     blockforest::BlockInfo blockInfo{block, storage};
 
@@ -791,7 +792,7 @@ namespace turbine_core {
                             const std::string pString{std::to_string(p)};
 
                             const std::string filename{
-                                    "Point_" + std::string(3 - pString.length(), '0') + pString + ".txt"};
+                                    "Point_" + std::string(pString.length() < 3 ? 3 - pString.length() : 0, '0') + pString + ".txt"};
 
                             auto filepath = bladeFolder / filename;
 

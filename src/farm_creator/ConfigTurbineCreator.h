@@ -525,7 +525,7 @@ namespace turbine_core {
 
                                 const std::string pString{std::to_string(p)};
 
-                                const std::string filename{ "Point_" + std::string(3 - pString.length(), '0') + pString + ".txt"};
+                                const std::string filename{ "Point_" + std::string(pString.length() < 3 ? 3 - pString.length() : 0, '0') + pString + ".txt"};
 
                                 std::ofstream os(bladeFolder / filename, std::ios::app);
 

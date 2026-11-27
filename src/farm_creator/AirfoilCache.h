@@ -306,6 +306,7 @@ namespace turbine_core {
                 gpuMemcpy(d_polar, interpolatorCpu->y(), nPoints*sizeof(Vector2<real_t>), gpuMemcpyHostToDevice);
 
                 newAirfoilPolarOnGpu<<<1,1>>>(d_airfoilPolar, nPoints, d_aoa, d_polar);
+                TURBINE_GPU_CHECK_LAUNCH()
 
                 gpuFree(d_aoa);
                 gpuFree(d_polar);
@@ -314,6 +315,7 @@ namespace turbine_core {
 
             HOST_PREFIX void deleteAirfoilPolars( aerodynamics::AirfoilPolar * d_airfoilPolar ) {
                 deleteAirfoilPolarOnGpu<<<1,1>>>(d_airfoilPolar);
+                TURBINE_GPU_CHECK_LAUNCH()
             }
 
 #else

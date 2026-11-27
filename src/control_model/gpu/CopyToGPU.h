@@ -29,15 +29,13 @@ namespace turbine_core {
                 HOST_PREFIX CopyToGPU() {
 
                     gpuMalloc((void**)&devicePtr, sizeof(ControlModel_T*));
-                    gpuErrchk(gpuPeekAtLastError())
-                    gpuErrchk(gpuDeviceSynchronize())
+                    TURBINE_GPU_CHECK()
 
                 }
 
                 HOST_PREFIX ~CopyToGPU() {
                     deleteControlModelOnGPU<<<1,1>>>((ControlModel**)devicePtr);
-                    gpuErrchk(gpuPeekAtLastError())
-                    gpuErrchk(gpuDeviceSynchronize())
+                    TURBINE_GPU_CHECK()
                     gpuFree(devicePtr);
                 }
 
@@ -119,21 +117,18 @@ namespace turbine_core {
                 gpuMemcpy(d_windVelocity,  cpuPtr->interpolator()->x(),  nPoints * sizeof(real_t), gpuMemcpyHostToDevice);
                 gpuMemcpy(d_angles,  cpuPtr->interpolator()->y(),  nPoints * sizeof(Vector3<real_t>), gpuMemcpyHostToDevice);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 newRAWSAnglesModelOnGPU<<<1,1>>>(cpyToGPU.devicePtr, cpuPtr->alphaFilter(), cpuPtr->previousRAWS(),
                                                 cpuPtr->previousAngles()[0], cpuPtr->previousAngles()[1], cpuPtr->previousAngles()[2],
                                                 nPoints, d_windVelocity, d_angles);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 gpuFree(d_windVelocity);
                 gpuFree(d_angles);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
             }
 
@@ -154,19 +149,16 @@ namespace turbine_core {
                 gpuMemcpy(d_windVelocity,  cpuPtr->interpolator()->x(),  nPoints * sizeof(real_t), gpuMemcpyHostToDevice);
                 gpuMemcpy(d_omegas,  cpuPtr->interpolator()->y(),  nPoints * sizeof(Vector3<real_t>), gpuMemcpyHostToDevice);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 newRAWSOmegaModelOnGPU<<<1,1>>>(cpyToGPU.devicePtr, cpuPtr->alphaFilter(), cpuPtr->previousRAWS(), nPoints, d_windVelocity, d_omegas);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 gpuFree(d_windVelocity);
                 gpuFree(d_omegas);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
             }
 
@@ -190,20 +182,17 @@ namespace turbine_core {
                 gpuMemcpy(d_translation,  cpuPtr->interpolatorTranslations()->y(),  nPoints * sizeof(Vector3<real_t>), gpuMemcpyHostToDevice);
                 gpuMemcpy(d_rotations,  cpuPtr->interpolatorRotations()->y(),  nPoints * sizeof(Vector3<real_t>), gpuMemcpyHostToDevice);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 newTimeControlVelocitiesModel<<<1,1>>>(cpyToGPU.devicePtr, nPoints, d_times, d_translation, d_rotations);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 gpuFree(d_times);
                 gpuFree(d_translation);
                 gpuFree(d_rotations);
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
             }
 
@@ -216,8 +205,7 @@ namespace turbine_core {
                     cpuPtr->generatorEfficiency()
                 );
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
             }
 
             // template specialisation
@@ -227,8 +215,7 @@ namespace turbine_core {
                     cpuPtr->pitchMin(), cpuPtr->pitchMax(), cpuPtr->ratedGeneratorSpeed(), cpuPtr->nGear(), cpuPtr->maxPitchRate()
                 );
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
             }
 
             // template specialisation
@@ -236,8 +223,7 @@ namespace turbine_core {
 
                 newSimpleYawController<<<1,1>>>(cpyToGPU.devicePtr, cpuPtr->yawingSpeed());
 
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
             }
         }
 

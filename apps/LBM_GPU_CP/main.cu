@@ -586,10 +586,12 @@ namespace turbine_core {
 
                 int threadsPerBlock = 256;
                  auto nInflowCells = inflowCellsIndices[&concurrentBlock->getId()].size();
+                 if (nInflowCells == 0) continue;
                  int blocksPerGrid = (nInflowCells+threadsPerBlock-1) / threadsPerBlock;
 
                 copyBoundaryData<<< blocksPerGrid, threadsPerBlock>>>( (real_t*)precursorPDFField->data(), (real_t*)concurrentPDFField->data(),
                     gpuInflowCellsIndices[&concurrentBlock->getId()], nInflowCells, Stencil_T::Q, concurrentPDFField->fStride() );
+                TURBINE_GPU_CHECK_LAUNCH()
              }
         });
         concurrentTimeLoop.add() << walberla::Sweep( concurrentSweepCollection.streamCollide() , "Concurrent LBM streamCollide sweep")

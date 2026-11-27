@@ -193,21 +193,18 @@ namespace turbine_core {
                         cudaMalloc( (void**)&d_points, nPoints * sizeof(Vector3<real_t>) );
                         cudaMemcpy( d_points, points.data(), nPoints * sizeof(Vector3<real_t>), cudaMemcpyHostToDevice );
 
-                        gpuErrchk(cudaPeekAtLastError())
-                        gpuErrchk(cudaDeviceSynchronize())
+                        TURBINE_GPU_CHECK()
 
                         interpolateFieldDataOnGPU<<<1,1>>>( nPoints, d_points, blockInfo, *(fieldPtr.get()), d_results );
 
-                        gpuErrchk(cudaPeekAtLastError())
-                        gpuErrchk(cudaDeviceSynchronize())
+                        TURBINE_GPU_CHECK()
 
                         cudaMemcpy( results[f].data(), d_results, fSize * nPoints * sizeof(real_t), cudaMemcpyDeviceToHost );
 
                         cudaFree( d_results );
                         cudaFree( d_points );
 
-                        gpuErrchk(cudaPeekAtLastError())
-                        gpuErrchk(cudaDeviceSynchronize())
+                        TURBINE_GPU_CHECK()
 
 #endif
 

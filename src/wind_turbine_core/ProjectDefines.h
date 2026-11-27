@@ -35,6 +35,8 @@
 #define ALIGN(n) __align__(n)
 #endif
 
+#define TURBINE_GPU_CHECK_LAUNCH() { WALBERLA_GPU_CHECK(gpuPeekAtLastError()) }
+
 #ifndef NDEBUG
 #define TURBINE_GPU_CHECK() { WALBERLA_GPU_CHECK(gpuPeekAtLastError()); WALBERLA_GPU_CHECK(gpuDeviceSynchronize()) }
 
@@ -48,7 +50,7 @@ inline void gpuAssert(gpuError_t code, const char *file, int line, bool abort=tr
     }
 }
 #else
-#define TURBINE_GPU_CHECK()
+#define TURBINE_GPU_CHECK() TURBINE_GPU_CHECK_LAUNCH()
 #define gpuErrchk(ans)
 #endif
 

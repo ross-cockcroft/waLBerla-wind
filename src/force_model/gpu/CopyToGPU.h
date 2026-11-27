@@ -36,15 +36,13 @@ namespace turbine_core {
                 HOST_PREFIX CopyToGPU() {
 
                     gpuMalloc((void**)&devicePtr, sizeof(ForceModel_T*));
-                    gpuErrchk(gpuPeekAtLastError())
-                    gpuErrchk(gpuDeviceSynchronize())
+                    TURBINE_GPU_CHECK()
 
                 }
 
                 HOST_PREFIX ~CopyToGPU() {
                     deleteForceModelOnGPU<<<1,1>>>((ForceModel**)devicePtr);
-                    gpuErrchk(gpuPeekAtLastError())
-                    gpuErrchk(gpuDeviceSynchronize())
+                    TURBINE_GPU_CHECK()
                     gpuFree(devicePtr);
                 }
 
@@ -111,15 +109,13 @@ namespace turbine_core {
                  gpuMemcpy(d_tipLossModel, &cpuPtr->tiplossModel_, sizeof(TipLossModel_T), gpuMemcpyHostToDevice);
 
                  newActuatorLineModelOnGPU<<<1,1>>>(cpyToGPU.devicePtr, cpuPtr->elementLength(), nPoints, d_actuatorData, d_tipLossModel);
-                 gpuErrchk(gpuPeekAtLastError())
-                 gpuErrchk(gpuDeviceSynchronize())
+                 TURBINE_GPU_CHECK()
 
                  gpuFree(d_actuatorData);
 
                  gpuFree(d_tipLossModel);
 
-                 gpuErrchk(gpuPeekAtLastError())
-                 gpuErrchk(gpuDeviceSynchronize())
+                 TURBINE_GPU_CHECK()
              }
 
 
@@ -133,8 +129,7 @@ namespace turbine_core {
                 // gpuMemcpy(d_actuatorData, cpuPtr->point_, nPoints * sizeof(ActuatorData), gpuMemcpyHostToDevice);
 
                 newActuatorDiskModelOnGPU<<<1,1>>>(cpyToGPU.devicePtr, cpuPtr->radius_, cpuPtr->drag_);
-                gpuErrchk(gpuPeekAtLastError())
-                gpuErrchk(gpuDeviceSynchronize())
+                TURBINE_GPU_CHECK()
 
                 // gpuFree(d_actuatorData);
 

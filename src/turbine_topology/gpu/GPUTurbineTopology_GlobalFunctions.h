@@ -89,7 +89,7 @@ namespace turbine_core {
                 projectors::Projectors projectors{ &densityInterpolator, &velocityInterpolator, &dummy, nGL };
 
                 int pointIdx = blockIdx.x;
-                int pointIdy = threadIdx.x;
+                int pointIdy = blockIdx.y * blockDim.x + threadIdx.x;
 
                 if (pointIdy < nComponentsBlade) {
                     (*base)->do_evaluateDensityAndVelocity(blockInfo, projectors, pointIdx, pointIdy);
