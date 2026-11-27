@@ -298,7 +298,7 @@ namespace turbine_core {
                 fieldMap
         };
 
-        {{target|generate_tke_output(field_map, runtime_gpu_indexing)|indent(8)}}
+        {{target|generate_tke_output(field_map, vtk_output, runtime_gpu_indexing)|indent(8)}}
 
         {{target|generate_output_before_functions(vtk_output,field_map)|indent(8)}}
 

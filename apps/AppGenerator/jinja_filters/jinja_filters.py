@@ -57,9 +57,9 @@ def generate_field_creation(field_map: set[Fields], target: Target, snapshot: bo
     field_list = sorted(field_list, key=lambda field: field.name)
 
     if snapshot:
-        possibly_loaded_fields = [Fields.FORCE, Fields.PDF,
-                                  Fields.MEAN_VELOCITY,
-                                  Fields.SUM_OF_SQUARES, Fields.SUM_OF_CUBES]
+        possibly_loaded_fields = [Fields.FORCE, Fields.PDF]
+        if vtk_output:
+            possibly_loaded_fields += [Fields.MEAN_VELOCITY, Fields.SUM_OF_SQUARES, Fields.SUM_OF_CUBES]
         created_fields = set[Fields]()
         loaded_fields = set[Fields]()
 
@@ -85,7 +85,8 @@ def generate_field_creation(field_map: set[Fields], target: Target, snapshot: bo
 
         result.append("\n\tif(!ssh->meanVelFile.empty()) {")
         result.append("\t\tconst auto meanVelFileName = std::string(std::filesystem::path(ssh->baseFolder) / std::filesystem::path(ssh->meanVelFile).c_str());")
-        result.append("\t\tinitialWelfordCounter = ssh->welfordCounter;\n")
+        if generate_wfb or vtk_output:
+            result.append("\t\tinitialWelfordCounter = ssh->welfordCounter;\n")
 
         if vtk_output and Fields.MEAN_VELOCITY in field_map:
             result.append(f"\t\t{get_field_variable(Fields.MEAN_VELOCITY, Target.CPU)} = blocks->loadBlockData(meanVelFileName, vectorFieldDataHandling, "
@@ -235,9 +236,10 @@ def generate_field_initialisation(field_map: set[Fields], with_snapshot: bool, v
         result = []
         result.append("if(!domainSetup.snapshotHandler_->loadSnapshot) {\n\t\t" + no_snapshot_init + "\n} else {\n")
 
-        result.append("\tif(domainSetup.snapshotHandler_->meanVelFile.empty()) {")
-        result.append("\t\tWALBERLA_ABORT(\"Mean velocity not loaded from snapshot but also not initialised.\")")
-        result.append("\t}\n")
+        if vtk_output and Fields.MEAN_VELOCITY in field_map:
+            result.append("\tif(domainSetup.snapshotHandler_->meanVelFile.empty()) {")
+            result.append("\t\tWALBERLA_ABORT(\"Mean velocity not loaded from snapshot but also not initialised.\")")
+            result.append("\t}\n")
         result.append("\t// initialise velocity field from pfd field if snapshot")
 
         getter_sweep = """    for( auto & block : *blocks ) {{
@@ -368,8 +370,8 @@ def generate_communication(target: Target, grid: Grid):
     return "\n".join(result)
 
 
-def generate_tke_output(target: Target, field_map: set[Fields], runtime_gpu_indexing: bool):
-    if not Fields.STRAIN_RATE in field_map:
+def generate_tke_output(target: Target, field_map: set[Fields], vtk_output: bool, runtime_gpu_indexing: bool):
+    if not vtk_output or not Fields.STRAIN_RATE in field_map:
         return ""
 
     result = []

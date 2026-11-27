@@ -36,7 +36,7 @@ def generate_snapshot_creation(vtk_output: bool, target: Target, grid: Grid, fie
     indent_string = indent + " " * len("   domainSetup.snapshotHandler_->createSnapshot(")
 
     optional_arguments = []
-    if Fields.MEAN_VELOCITY in field_map:
+    if welford_output.active:
 
         assert (welford_output.mean_field in field_map), \
             "The mean velocity field must be provided in the field map."
