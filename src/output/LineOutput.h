@@ -31,8 +31,6 @@
 
 #include <stencil/D3Q27.h>
 
-#include "output/TurbineBeforeFunctors.h"
-
 #include "LineOutputLine.h"
 #include "LineOutputMacroscopicLine.h"
 
@@ -46,7 +44,6 @@ namespace turbine_core {
         class LineOutput {
 
             using FieldMap = LineOutputLineBase::FieldMap;
-            using BeforeFunction_T = std::function< void () >;
 
         public:
 
@@ -110,7 +107,7 @@ namespace turbine_core {
                 const auto timestep = timeloop_->getCurrentTimeStep();
                 for( uint_t i = 0; i < lineOutput_.size(); ++i ) {
                     auto & lineOut = lineOutput_[i];
-                    if(timestep >= lineOut->startingTimeStep() && (timestep % lineOut->outputFrequency()) == 0)
+                    if(lineOut->outputFrequency() != 0 && timestep >= lineOut->startingTimeStep() && (timestep % lineOut->outputFrequency()) == 0)
                         lineOut->writeLine(forest_, filename(i), timestep);
                 }
             }
@@ -118,12 +115,6 @@ namespace turbine_core {
             void forceWrite() {
                 for( uint_t i = 0; i < lineOutput_.size(); ++i ) {
                     lineOutput_[i]->writeLine(forest_, filename(i), timeloop_->getCurrentTimeStep());
-                }
-            }
-
-            void addToBeforeFunctor( GenericTurbineBeforeFunctor & beforeFunctor ) {
-                for( uint_t i = 0; i < lineOutput_.size(); ++i ) {
-                    beforeFunctor.addInterval(lineOutput_[i]->outputFrequency());
                 }
             }
 

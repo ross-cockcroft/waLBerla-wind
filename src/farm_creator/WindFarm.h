@@ -249,7 +249,7 @@ namespace turbine_core {
 
                 const uint_t timestep = timeloop_ ? timeloop_->getCurrentTimeStep() : 0;
 
-                if( timestep < startingTimeStep || timestep % outputFrequency != 0)
+                if( outputFrequency == 0 || timestep < startingTimeStep || timestep % outputFrequency != 0)
                    return;
 
                 for( uint_t i = 0; i < turbines_.size(); ++i ) {

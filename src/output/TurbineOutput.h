@@ -120,9 +120,6 @@ namespace turbine_core {
                     }
                 }
 
-                if( lineOutput_ )
-                    lineOutput_->addToBeforeFunctor( beforeFunctor );
-
                 beforeFunctions_.emplace_back(beforeFunctor);
 
             }
@@ -275,9 +272,9 @@ namespace turbine_core {
                                                                                           baseFolder, executionFolder,continuousNumbering_,binary_,
                                                                                           littleEndian_, useMPIIO_, initialExecutionCount_ + skipTimestep_, amrFileFormat_, oneFilePerProcess_));
                     auto & fieldWriter = fieldVTKOutput_.back();
-                    fieldWriter->setInitialWriteCallsToSkip(skipTimestep_);
 
-                    fieldVTKOutputInterval_.insert(writeFrequency);
+                    if (writeFrequency != 0)
+                        fieldVTKOutputInterval_.insert(writeFrequency);
 
                     for(const auto & cf : cellFilter) {
                         fieldWriter->addCellInclusionFilter(cf);
@@ -340,9 +337,10 @@ namespace turbine_core {
                 }
                 for (auto & block : lineOutputBlocks) {
                     const uint_t frequency = block.getParameter<uint_t>("outputFrequency");
-                    if (frequency != 0)
+                    if (frequency != 0) {
                         writeLineOutput_ = true;
-                    lineOutputOutputInterval_.insert( frequency );
+                        lineOutputOutputInterval_.insert( frequency );
+                    }
                 }
 
             }

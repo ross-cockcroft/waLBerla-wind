@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include <cmath>
 #include <functional>
 #include <memory>
 #include <tuple>
@@ -50,6 +49,8 @@ namespace turbine_core {
 
             void operator()() {
 
+                const uint_t timeStep = timeloop_->getCurrentTimeStep();
+
                 for( const auto & interval : outputInterval_ ) {
 
                     const auto outputInterval = std::get<0>(interval);
@@ -57,11 +58,11 @@ namespace turbine_core {
                     // never output -> never call function
                     if( outputInterval == 0 )
                         continue;
-                    // account for potential starting time step
-                    uint_t shiftedTimeStep = timeloop_->getCurrentTimeStep() - std::get<2>(interval); // shift by startingTimeStep
 
-                    auto n = uint_t(std::floor(real_t(shiftedTimeStep) / real_t(outputInterval)));
-                    uint_t off = shiftedTimeStep - n * outputInterval;
+                    if( timeStep < std::get<2>(interval) )
+                        continue;
+
+                    const uint_t off = timeStep % outputInterval;
 
                     // not in sampling interval -> no action necessary
                     if( off > std::get<1>(interval) )
