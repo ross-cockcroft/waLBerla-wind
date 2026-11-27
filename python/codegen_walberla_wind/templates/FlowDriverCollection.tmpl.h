@@ -106,7 +106,7 @@ namespace walberla {
                     {% for driver_enum, driver_class in driver_classes.items() -%}
                     case turbine_core::external_forces::DriverSetup::{{driver_enum}}: {
                     {%- if driver_enum == "DynamicPressureGradient" %}
-                        auto windDirChangeRate = windDirChangeRateInterpolator_({{data_type}}(timeloop_->getCurrentTimeStep()));
+                        auto windDirChangeRate = windDirChangeRateInterpolator_({{data_type}}({% if nonuniform %}timeloop_->getCurrentTimeStep() * (uint_t(1) << sbf_->getDepth()){% else %}timeloop_->getCurrentTimeStep(){% endif %}));
                         {{collection_object_name}}->setWinddirectionrate(windDirChangeRate);
                         windDirection_ += windDirChangeRate;
                         {{collection_object_name}}->setCoswinddirection(std::cos(windDirection_));
@@ -127,7 +127,7 @@ namespace walberla {
                     {% for driver_enum, driver_class in driver_classes.items() -%}
                     case turbine_core::external_forces::DriverSetup::{{driver_enum}}: {
                     {%- if driver_enum == "DynamicPressureGradient" %}
-                        auto windDirChangeRate = windDirChangeRateInterpolator_({{data_type}}(timeloop_->getCurrentTimeStep()));
+                        auto windDirChangeRate = windDirChangeRateInterpolator_({{data_type}}({% if nonuniform %}timeloop_->getCurrentTimeStep() * (uint_t(1) << sbf_->getDepth()){% else %}timeloop_->getCurrentTimeStep(){% endif %}));
                         {{collection_object_name}}->setWinddirectionrate(windDirChangeRate);
                         windDirection_ += windDirChangeRate;
                         {{collection_object_name}}->setCoswinddirection(std::cos(windDirection_));

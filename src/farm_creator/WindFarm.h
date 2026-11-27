@@ -3,6 +3,7 @@
 #ifndef TURBINECORE_WINDFARM_H
 #define TURBINECORE_WINDFARM_H
 
+#include <limits>
 #include <vector>
 
 #include "core/mpi/MPIManager.h"
@@ -105,9 +106,27 @@ namespace turbine_core {
                 timeloop_ = timeloop;
             }
 
+            HOST_PREFIX uint_t finestSubstepsPerStep() const {
+                return forest_ ? (uint_t(1) << forest_->getDepth()) : uint_t(1);
+            }
+
+            HOST_PREFIX uint_t finestStep(const uint_t coarseStep) const {
+                return coarseStep * finestSubstepsPerStep() + finestSubstep_;
+            }
+
+            HOST_PREFIX void advanceFinestSubstep() {
+                const uint_t coarseStep = timeloop_ ? timeloop_->getCurrentTimeStep() : 0;
+                if(coarseStep != lastCoarseStep_) {
+                    lastCoarseStep_ = coarseStep;
+                    finestSubstep_ = 0;
+                } else {
+                    ++finestSubstep_;
+                }
+            }
+
             HOST_PREFIX void applyControl() {
 
-                const uint_t timestep = timeloop_ ? timeloop_->getCurrentTimeStep() : 0;
+                const uint_t timestep = finestStep(timeloop_ ? timeloop_->getCurrentTimeStep() : 0);
                 for( uint_t i = 0; i < turbines_.size(); ++i ) {
 
                     if (!turbines_[i])
@@ -197,7 +216,7 @@ namespace turbine_core {
 
             HOST_PREFIX void callback(const Component::Function & fct, const ComponentType & type = ComponentType::ANY) {
 
-                const uint_t timestep = timeloop_ ? timeloop_->getCurrentTimeStep() : 0;
+                const uint_t timestep = finestStep(timeloop_ ? timeloop_->getCurrentTimeStep() : 0);
 
                 for(auto& turbine : turbines_) {
                     if(turbine)
@@ -306,7 +325,7 @@ namespace turbine_core {
                         auto filepath = baseFolder / filename;
                         std::ofstream os(filepath.string(), std::ios::app);
                         if (os.is_open()) {
-                            os << timestep << "\t" << real_t(timestep)*conversion::ConversionFactors::C_t() << "\t";
+                            os << timestep << "\t" << real_t(timestep*finestSubstepsPerStep())*conversion::ConversionFactors::C_t() << "\t";
                             os << -omega / Conversion::C_t() << "\t";
                             os << power << "\t" << thrust;
                             os << "\n";
@@ -379,6 +398,8 @@ namespace turbine_core {
             const std::string outputDirectory_;
 
             walberla::timeloop::ITimeloop * timeloop_{nullptr};
+            uint_t lastCoarseStep_{std::numeric_limits<uint_t>::max()};
+            uint_t finestSubstep_{0};
 
         };
 

@@ -438,7 +438,7 @@ namespace turbine_core {
         	blocks, pdfFieldGpuID, sweepCollection, boundaryCollection, communication, pdfPackInfo );
 
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level!=0) return; turbineOutput.write(); }, "VTK output");
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
         if(level != blocks->getDepth()) return;
         std::vector<walberla::Block* > blocksOnLevel;

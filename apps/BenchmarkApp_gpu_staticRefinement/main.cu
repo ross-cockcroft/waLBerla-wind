@@ -306,7 +306,7 @@ namespace turbine_core {
         walberla::lbm_generated::BasicRecursiveTimeStepGPU<PdfGPUField_T, SweepCollection_T, BoundaryCollection_T, walberla::timeloop::SweepTimeloop<TimingPolicy_T>> recursiveTimestep (
         	blocks, pdfFieldGpuID, sweepCollection, boundaryCollection, communication, pdfPackInfo );
 
-        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Updata Discretisation");
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Updata Discretisation");
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) {
             if(level != blocks->getDepth()) return;
             std::vector<walberla::Block* > blocksOnLevel;

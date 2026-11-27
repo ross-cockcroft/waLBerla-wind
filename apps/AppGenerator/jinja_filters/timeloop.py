@@ -155,7 +155,7 @@ class Timeloop:
         if self.vtk_output:
             result.append(self._add_function_nonuniform(function=("VTK output", "[&](uint_t level) { if(level!=0) return; turbineOutput.write(); }"), is_sweep=False))
 
-        result.append(self._add_function_nonuniform(function=("Rotation", finest_only("farm.callback(Component::Function::UPDATE_DISCRETISATION);")), is_sweep=False))
+        result.append(self._add_function_nonuniform(function=("Rotation", finest_only("farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION);")), is_sweep=False))
         result.append(self._add_function_nonuniform(function=("Evaluate density and velocity", "farm.evaluateDensityAndVelocity"), is_sweep=True, only_level=FINEST))
 
         if self.turbine_communication:

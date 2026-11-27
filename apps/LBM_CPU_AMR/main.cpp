@@ -416,7 +416,7 @@ namespace turbine_core {
         LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) { if (level != 0) return; for (auto &block: *blocks) { welfordLambdaVelocity(&block); }}, "Welford Output Sweep");
 
         // turbine handling
-        LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
+        LBMMeshRefinement.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.advanceFinestSubstep(); farm.callback(Component::Function::UPDATE_DISCRETISATION); }, "Rotation");
         LBMMeshRefinement.addPostCollisionFunction( [&](uint_t level) {
             if(level != blocks->getDepth()) return;
             std::vector<walberla::Block*> blocksOnLevel;
