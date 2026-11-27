@@ -129,9 +129,6 @@ namespace turbine_core {
                 const uint_t timestep = finestStep(timeloop_ ? timeloop_->getCurrentTimeStep() : 0);
                 for( uint_t i = 0; i < turbines_.size(); ++i ) {
 
-                    if (!turbines_[i])
-                        continue;
-
                     if(!isControlled_[i])
                         continue;
 
@@ -199,8 +196,8 @@ namespace turbine_core {
                         for (auto &block: *forest_) {
                             real_t blockLocalPower{}, blockLocalThrust{};
                             real_t blockLocalTorque{};
-                            turbines_[i]->calculatePowerAndThrust(&block, forest_, blockLocalPower, blockLocalThrust);
-                            turbines_[i]->calculateTorque(&block, forest_, blockLocalTorque);
+                            turbine->calculatePowerAndThrust(&block, forest_, blockLocalPower, blockLocalThrust);
+                            turbine->calculateTorque(&block, forest_, blockLocalTorque);
                             rotorTorque += blockLocalTorque;
                         }
                         turbine->getOmega(rotorOmega);
