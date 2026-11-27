@@ -39,12 +39,7 @@ namespace turbine_core {
                     std::getline(file, line); // skip header
                     std::getline(file, line); // skip separation line
 
-                    std::getline(file, line); // Read nPoints, aMin, aMax
-                    std::stringstream inHeader(line);
-                    inHeader >> nPoints >> aMin >> aMax;
-
-                    aMin *= walberla::math::pi / real_t(180);
-                    aMax *= walberla::math::pi / real_t(180);
+                    std::getline(file, line);
 
                     std::getline(file, line); // skip separation line
 
@@ -68,7 +63,15 @@ namespace turbine_core {
                     file.close();
                 }
 
+                if (aoa.empty()) {
+                    WALBERLA_ABORT("Airfoil polar file " << filename << " holds no data.");
+                }
+
                 interpolator.setPoints(aoa.size(), aoa.data(), polar.data());
+
+                nPoints = aoa.size();
+                aMin = aoa.front();
+                aMax = aoa.back();
 
             }
 
@@ -83,30 +86,40 @@ namespace turbine_core {
 
             HOST_DEVICE_PREFIX AirfoilPolar( const real_t & weight, const AirfoilPolar & lower, const AirfoilPolar & upper ) {
 
-                auto * aoa = (real_t*) malloc(lower.nPoints * sizeof(real_t));
-                auto * polar = (Vector2<real_t>*) malloc(lower.nPoints * sizeof(Vector2<real_t>));
+                const uint_t nLo = lower.interpolator.length();
+                const uint_t nUp = upper.interpolator.length();
+                const real_t * xLo = lower.interpolator.x();
+                const real_t * xUp = upper.interpolator.x();
 
-                const real_t aStep = (lower.aMax - lower.aMin) / (real_t(lower.nPoints)-real_t(1.0));
+                auto * aoa = (real_t*) malloc((nLo + nUp) * sizeof(real_t));
+                auto * polar = (Vector2<real_t>*) malloc((nLo + nUp) * sizeof(Vector2<real_t>));
 
-                real_t a = lower.aMin;
-                for( uint_t i = 0; i < lower.nPoints; ++i ) {
+                const real_t tol = real_t(1e-7);
+                uint_t iLo = 0, iUp = 0, n = 0;
+                while (iLo < nLo || iUp < nUp) {
+                    real_t a;
+                    if (iUp >= nUp || (iLo < nLo && xLo[iLo] <= xUp[iUp]))
+                        a = xLo[iLo++];
+                    else
+                        a = xUp[iUp++];
 
-                    aoa[i] = a;
+                    if (n > 0 && a - aoa[n-1] <= tol)
+                        continue;
 
                     auto lowerPolar = lower.interpolator(a);
                     auto upperPolar = upper.interpolator(a);
 
-                    polar[i][0] = (static_cast<real_t>(1) - weight) * lowerPolar[0] + weight * upperPolar[0];
-                    polar[i][1] = (static_cast<real_t>(1) - weight) * lowerPolar[1] + weight * upperPolar[1];
-
-                    a += aStep;
+                    aoa[n] = a;
+                    polar[n][0] = (static_cast<real_t>(1) - weight) * lowerPolar[0] + weight * upperPolar[0];
+                    polar[n][1] = (static_cast<real_t>(1) - weight) * lowerPolar[1] + weight * upperPolar[1];
+                    ++n;
                 }
 
-                interpolator.setPoints(lower.nPoints, aoa, polar);
+                interpolator.setPoints(n, aoa, polar);
 
-                nPoints = lower.nPoints;
-                aMin = lower.aMin;
-                aMax = aoa[nPoints-1];
+                nPoints = n;
+                aMin = aoa[0];
+                aMax = aoa[n-1];
 
                 free(aoa);
                 free(polar);

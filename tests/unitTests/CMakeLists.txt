@@ -2,6 +2,7 @@
 include_directories( ${TurbineCore_SOURCE_DIR}/src )
 include_directories( ${TurbineCore_BINARY_DIR}/src ) # for generated headers
 
+add_subdirectory(aerodynamics)
 add_subdirectory(component)
 add_subdirectory(data_interpolator)
 add_subdirectory(domain)
