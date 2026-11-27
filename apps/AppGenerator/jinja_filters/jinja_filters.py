@@ -423,6 +423,8 @@ def generate_output_before_functions(target: Target, vtk_output: bool, field_map
             if Fields.SUM_OF_CUBES in field_map:
                 result.append(indent + device_to_host_field_copy(Fields.SUM_OF_CUBES))
 
+            if Fields.OMEGA in field_map:
+                result.append(indent + device_to_host_field_copy(Fields.OMEGA))
             if Fields.EDDY_VISCOSITY in field_map:
                 result.append(indent + device_to_host_field_copy(Fields.EDDY_VISCOSITY))
             if Fields.STRAIN_RATE in field_map:

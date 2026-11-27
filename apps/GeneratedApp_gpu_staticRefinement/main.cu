@@ -414,6 +414,7 @@ namespace turbine_core {
             walberla::gpu::fieldCpy<VectorField_T, GPUField_T<real_t>>( blocks, meanVelocityFieldCpuID, meanVelocityFieldGpuID );
             walberla::gpu::fieldCpy<SecondOrderTensorField_T, GPUField_T<real_t>>( blocks, sumOfSquaresFieldCpuID, sumOfSquaresFieldGpuID );
             walberla::gpu::fieldCpy<ThirdOrderTensorField_T, GPUField_T<real_t>>( blocks, sumOfCubesFieldCpuID, sumOfCubesFieldGpuID );
+            walberla::gpu::fieldCpy<ScalarField_T, GPUField_T<real_t>>( blocks, omegaFieldCpuID, omegaFieldGpuID );
             walberla::gpu::fieldCpy<ScalarField_T, GPUField_T<real_t>>( blocks, eddyViscosityFieldCpuID, eddyViscosityFieldGpuID );
             walberla::gpu::fieldCpy<SecondOrderTensorField_T, GPUField_T<real_t>>( blocks, strainRateFieldCpuID, strainRateFieldGpuID );
             walberla::gpu::fieldCpy<ScalarField_T, GPUField_T<real_t>>( blocks, meanEddyViscosityFieldCpuID, meanEddyViscosityFieldGpuID );
