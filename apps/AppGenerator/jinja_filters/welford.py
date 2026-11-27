@@ -61,18 +61,11 @@ class Welford:
         variable = self.basename[0].lower() + self.basename[1:]
         return f"{variable}Lambda"
 
-    def after_timestep_function(self):
-        """Counter update/reset followed by the Welford sweep on all blocks, as one void() function.
-
-        Used for refined grids: added with addFuncAfterTimeStep it runs once per coarse time step,
-        so all levels are updated with the same counter (as post-collision function it would run
-        once per level and substep, which advances the shared counter several times per step)."""
-        result = ["[&]() {"]
-        result += self._reset_body()
-        result.append(f"\tfor ( auto & block : *blocks ) {{")
+    def sampling_body(self):
+        result = self._reset_body()
+        result.append("\tfor ( auto & block : *blocks ) {")
         result.append(f"\t\t{self.lambda_name()}(&block);")
-        result.append(f"\t}}")
-        result.append(f"}}")
+        result.append("\t}")
         return "\n".join(result)
 
     def reset(self, indent: int):

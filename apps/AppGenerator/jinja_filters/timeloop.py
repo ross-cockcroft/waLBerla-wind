@@ -174,16 +174,14 @@ class Timeloop:
         if self.turbine_communication:
             result.append(self._add_function_nonuniform(function=("Reset communication data", finest_only("farm.callback(Component::Function::RESET_COMMUNICATION_DATA);")), is_sweep=False))
 
+        welfords = [w for w in (self.welford_output, self.welford_eddy_viscosity, self.welford_strain_rate) if w.active]
+        if welfords:
+            body = "\n".join("{" + w.sampling_body() + "}" for w in welfords)
+            result.append(self._add_function_nonuniform(function=("Welford sampling", "[&](uint_t level) { if(level != 0) return;\n" + body + "\n}"), is_sweep=False))
+
         result.append(self._initial_ghost_exchange())
 
         result.append(f"\n{self.recursive_timestep_name}.addRefinementToTimeLoop( {self.name} );\n")
-
-        if self.welford_output.active:
-            result.append(self.add_after_timestep(function=("Welford Output Sweep", self.welford_output.after_timestep_function())))
-        if self.welford_eddy_viscosity.active:
-            result.append(self.add_after_timestep(function=("Welford Eddy Viscosity Sweep", self.welford_eddy_viscosity.after_timestep_function())))
-        if self.welford_strain_rate.active:
-            result.append(self.add_after_timestep(function=("Welford Strain Rate Sweep", self.welford_strain_rate.after_timestep_function())))
 
         if self.with_snapshot:
             result.append(self.add_after_timestep(("Snapshot creation",

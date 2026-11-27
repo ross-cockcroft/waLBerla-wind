@@ -429,14 +429,8 @@ namespace turbine_core {
         }}, "Spread forces");
 
         recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != blocks->getDepth()) return; farm.callback(Component::Function::RESET_COMMUNICATION_DATA); }, "Reset communication data");
-
-        for(uint_t level = 0; level < blocks->getNumberOfLevels(); ++level) { communication->communicateEqualLevel(level); }
-        for(uint_t level = 1; level < blocks->getNumberOfLevels(); ++level) { communication->communicateCoarseToFine(level); }
-
-        recursiveTimestep.addRefinementToTimeLoop( timeloop );
-
-        timeloop.addFuncAfterTimeStep( [&]() {
-        	if(welfordInterval && (uint_t(welfordOutputSweep.getCounter()) % welfordInterval == 0)){
+        recursiveTimestep.addPostCollisionFunction([&](uint_t level) { if(level != 0) return;
+        {	if(welfordInterval && (uint_t(welfordOutputSweep.getCounter()) % welfordInterval == 0)){
         		welfordOutputSweep.setCounter(real_t(1));
         		for ( auto blockIt = blocks->begin(); blockIt != blocks->end(); ++blockIt ) {
         			auto dst = blockIt->getData<VectorField_T>( meanVelocityFieldCpuID );
@@ -450,10 +444,8 @@ namespace turbine_core {
         	}
         	for ( auto & block : *blocks ) {
         		welfordOutputLambda(&block);
-        	}
-        }, "Welford Output Sweep" );
-        timeloop.addFuncAfterTimeStep( [&]() {
-        	if(welfordInterval && (uint_t(welfordEddyViscositySweep.getCounter()) % welfordInterval == 0)){
+        	}}
+        {	if(welfordInterval && (uint_t(welfordEddyViscositySweep.getCounter()) % welfordInterval == 0)){
         		welfordEddyViscositySweep.setCounter(real_t(1));
         		for ( auto blockIt = blocks->begin(); blockIt != blocks->end(); ++blockIt ) {
         			auto dst = blockIt->getData<ScalarField_T>( meanEddyViscosityFieldCpuID );
@@ -465,10 +457,8 @@ namespace turbine_core {
         	}
         	for ( auto & block : *blocks ) {
         		welfordEddyViscosityLambda(&block);
-        	}
-        }, "Welford Eddy Viscosity Sweep" );
-        timeloop.addFuncAfterTimeStep( [&]() {
-        	if(welfordInterval && (uint_t(welfordStrainRateSweep.getCounter()) % welfordInterval == 0)){
+        	}}
+        {	if(welfordInterval && (uint_t(welfordStrainRateSweep.getCounter()) % welfordInterval == 0)){
         		welfordStrainRateSweep.setCounter(real_t(1));
         		for ( auto blockIt = blocks->begin(); blockIt != blocks->end(); ++blockIt ) {
         			auto dst = blockIt->getData<SecondOrderTensorField_T>( meanStrainRateFieldCpuID );
@@ -480,8 +470,13 @@ namespace turbine_core {
         	}
         	for ( auto & block : *blocks ) {
         		welfordStrainRateLambda(&block);
-        	}
-        }, "Welford Strain Rate Sweep" );
+        	}}
+        }, "Welford sampling");
+        for(uint_t level = 0; level < blocks->getNumberOfLevels(); ++level) { communication->communicateEqualLevel(level); }
+        for(uint_t level = 1; level < blocks->getNumberOfLevels(); ++level) { communication->communicateCoarseToFine(level); }
+
+        recursiveTimestep.addRefinementToTimeLoop( timeloop );
+
         timeloop.addFuncAfterTimeStep(  [&](){
                           if ((domainSetup.snapshotHandler_->storeSnapshot) && (timeloop.getCurrentTimeStep() % domainSetup.snapshotHandler_->snapshotFrequency == 0) && (timeloop.getCurrentTimeStep() > 0)) {
                              domainSetup.snapshotHandler_->createSnapshot(timeloop.getCurrentTimeStep(), blocks, pdfFieldCpuID, forceFieldCpuID,
