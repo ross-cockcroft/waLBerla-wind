@@ -235,44 +235,44 @@ namespace turbine_core {
 
         /// DOMAIN INITIALISATION
         WALBERLA_LOG_INFO_ON_ROOT("Initialise precursor and concurrent domain...")
-        if(!precursorDomainSetup.snapshotHandler_->loadSnapshot) {
+        const bool loadSnapshot = precursorDomainSetup.snapshotHandler_->loadSnapshot;
 
-            const real_t flowDirection = atan(initialVelocity[1] / initialVelocity[0]);
+        const real_t flowDirection = atan(initialVelocity[1] / initialVelocity[0]);
 
-            std::unique_ptr<domain::DomainInitialisation> precursorInitialiser{};
-            std::unique_ptr<domain::DomainInitialisation> concurrentInitialiser{};
-            if (initType == domain::DomainInitialisation::UNIFORM) {
-                WALBERLA_LOG_INFO_ON_ROOT("... Uniform")
-                precursorInitialiser = std::make_unique<domain::UniformInitialisation>(precursorBlocks, initialVelocity);
-                concurrentInitialiser = std::make_unique<domain::UniformInitialisation>(concurrentBlocks, initialVelocity);
+        std::unique_ptr<domain::DomainInitialisation> precursorInitialiser{};
+        std::unique_ptr<domain::DomainInitialisation> concurrentInitialiser{};
+        if (initType == domain::DomainInitialisation::UNIFORM) {
+            WALBERLA_LOG_INFO_ON_ROOT("... Uniform")
+            precursorInitialiser = std::make_unique<domain::UniformInitialisation>(precursorBlocks, initialVelocity);
+            concurrentInitialiser = std::make_unique<domain::UniformInitialisation>(concurrentBlocks, initialVelocity);
 
-            } else if (initType == domain::DomainInitialisation::ASMUTH) {
-                precursorInitialiser = std::make_unique<domain::AsmuthInitialisation>(precursorBlocks, flowDirection, uTau, roughnessLength, kappa, B,
-                                                                             viscosity_LU, precursorDomainSetup.domainSize_, true);
-                concurrentInitialiser = std::make_unique<domain::AsmuthInitialisation>(concurrentBlocks, flowDirection, uTau, roughnessLength, kappa, B,
-                                                                             viscosity_LU, concurrentDomainSetup.domainSize_, true);
-            } else if (initType == domain::DomainInitialisation::LOG_LAW) {
-                precursorInitialiser = std::make_unique<domain::AsmuthInitialisation>(precursorBlocks, flowDirection, uTau, roughnessLength, kappa, B,
-                                                                             viscosity_LU, precursorDomainSetup.domainSize_, false);
-                concurrentInitialiser = std::make_unique<domain::AsmuthInitialisation>(concurrentBlocks, flowDirection, uTau, roughnessLength, kappa, B,
-                                                                             viscosity_LU, concurrentDomainSetup.domainSize_, false);
-            }
+        } else if (initType == domain::DomainInitialisation::ASMUTH) {
+            precursorInitialiser = std::make_unique<domain::AsmuthInitialisation>(precursorBlocks, flowDirection, uTau, roughnessLength, kappa, B,
+                                                                         viscosity_LU, precursorDomainSetup.domainSize_, true);
+            concurrentInitialiser = std::make_unique<domain::AsmuthInitialisation>(concurrentBlocks, flowDirection, uTau, roughnessLength, kappa, B,
+                                                                         viscosity_LU, concurrentDomainSetup.domainSize_, true);
+        } else if (initType == domain::DomainInitialisation::LOG_LAW) {
+            precursorInitialiser = std::make_unique<domain::AsmuthInitialisation>(precursorBlocks, flowDirection, uTau, roughnessLength, kappa, B,
+                                                                         viscosity_LU, precursorDomainSetup.domainSize_, false);
+            concurrentInitialiser = std::make_unique<domain::AsmuthInitialisation>(concurrentBlocks, flowDirection, uTau, roughnessLength, kappa, B,
+                                                                         viscosity_LU, concurrentDomainSetup.domainSize_, false);
+        }
 
-            WALBERLA_LOG_INFO_ON_ROOT("... Macro setters")
-            using MacroSetter_T = walberla::pystencils::waLBerlaWind_MacroSetter;
+        WALBERLA_LOG_INFO_ON_ROOT("... Macro setters")
+        using MacroSetter_T = walberla::pystencils::waLBerlaWind_MacroSetter;
 
-            MacroSetter_T precursorSetter(precursorDensityFieldID, precursorForceFieldID, precursorPdfFieldID, precursorVelocityFieldID);
-            MacroSetter_T concurrentSetter(concurrentDensityFieldID, concurrentForceFieldID, concurrentPdfFieldID, concurrentVelocityFieldID);
+        MacroSetter_T precursorSetter(precursorDensityFieldID, precursorForceFieldID, precursorPdfFieldID, precursorVelocityFieldID);
+        MacroSetter_T concurrentSetter(concurrentDensityFieldID, concurrentForceFieldID, concurrentPdfFieldID, concurrentVelocityFieldID);
 
+        if(!loadSnapshot) {
             precursorInitialiser->setViaVelocityField<VectorField_T, MacroSetter_T>(precursorVelocityFieldID, precursorSetter);
-            // Probably useless to initialize since we will copy it later
-            concurrentInitialiser->setViaVelocityField<VectorField_T, MacroSetter_T>(concurrentVelocityFieldID, concurrentSetter);
-            // WARNING: not sure if we should initialize like this here
-            concurrentInitialiser->setViaVelocityField<VectorField_T, MacroSetter_T>(concurrentMeanVelocityFieldID, concurrentSetter);
-        } else {
-            if(precursorDomainSetup.snapshotHandler_->meanVelFile.empty()) {
-                WALBERLA_ABORT("Mean velocity not loaded from snapshot but also not initialised.")
-            }
+        }
+        // Probably useless to initialize since we will copy it later
+        concurrentInitialiser->setViaVelocityField<VectorField_T, MacroSetter_T>(concurrentVelocityFieldID, concurrentSetter);
+        // WARNING: not sure if we should initialize like this here
+        concurrentInitialiser->setViaVelocityField<VectorField_T, MacroSetter_T>(concurrentMeanVelocityFieldID, concurrentSetter);
+
+        if(loadSnapshot) {
             // initialise velocity field from pfd field if snapshot
             walberla::pystencils::waLBerlaWind_MacroGetter getter(precursorDensityFieldID, precursorForceFieldID, precursorPdfFieldID, precursorVelocityFieldID);
             for( auto & block : *precursorBlocks ) {
