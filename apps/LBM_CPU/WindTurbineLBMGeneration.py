@@ -17,6 +17,7 @@ from lbmpy_walberla.additional_data_handler import OutflowAdditionalDataHandler
 from lbmpy.relaxationrates import *
 
 from codegen_walberla_wind import generate_flow_driver_collection
+from codegen_walberla_wind.qr_guard import guard_qr_division
 from codegen_walberla_wind.wall_function import WallLinkWFBAdditionalDataHandler
 
 info_header = """
@@ -119,6 +120,7 @@ with CodeGeneration() as ctx:
                                        cse_global=False, cse_pdfs=False)
 
     collision_rule = create_lb_collision_rule(lbm_config=lbm_config, lbm_optimisation=lbm_optimisation)
+    collision_rule = guard_qr_division(collision_rule)
 
     lb_method = collision_rule.method
 

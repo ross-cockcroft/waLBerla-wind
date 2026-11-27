@@ -22,6 +22,7 @@ from lbmpy.relaxationrates import *
 from lbmpy.advanced_streaming.utility import is_inplace
 
 from codegen_walberla_wind import generate_flow_driver_collection
+from codegen_walberla_wind.qr_guard import guard_qr_division
 from codegen_walberla_wind.wall_function import WallLinkWFBAdditionalDataHandler
 
 info_header = """
@@ -138,6 +139,7 @@ with CodeGeneration() as ctx:
                                        cse_global=True, cse_pdfs=False)
 
     collision_rule = create_lb_collision_rule(lbm_config=lbm_config, lbm_optimisation=lbm_optimisation)
+    collision_rule = guard_qr_division(collision_rule)
     collision_rule = insert_fast_divisions(collision_rule)
     collision_rule = insert_fast_sqrts(collision_rule)
 
