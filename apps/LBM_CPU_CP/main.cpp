@@ -511,11 +511,11 @@ namespace turbine_core {
                                  << walberla::AfterFunction( [&]() {farm.callback(Component::Function::RESET_COMMUNICATION_DATA);}, "ResetCommunicationData" );
 
         precursorTimeLoop.add() << walberla::BeforeFunction( precursorCommunication, "Precursor field communication" )
-                                << walberla::Sweep( precursorBoundaryCollection.getSweep(), "Precursor boundary handling" )
-                                << walberla::AfterFunction( [&]() {
+                                << walberla::BeforeFunction( [&]() {
                                     if( precursorBoundarySetup.inflowType() == InflowSetup::ShiftedPeriodic )
                                         shiftedPeriodicity();
-                                    } );
+                                    } )
+                                << walberla::Sweep( precursorBoundaryCollection.getSweep(), "Precursor boundary handling" );
         precursorTimeLoop.add() << walberla::Sweep( precursorSweepCollection.stream() , "Precursor LBM stream sweep");
         precursorTimeLoop.add() << walberla::Sweep( precursorSweepCollection.collide() , "Precursor LBM collide sweep")
                                 << walberla::AfterFunction( precursorOutput, "Precursor VTK output" )
