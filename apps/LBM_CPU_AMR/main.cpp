@@ -294,7 +294,7 @@ namespace turbine_core {
                 inflowVelocity[0], inflowVelocity[1], inflowVelocity[2], velocityInit
         );
 
-        WALBERLA_CHECK(boundarySetup.inflowType() != InflowSetup::ShiftedPeriodic, "Shifted periodicity is currently not supported for non-uniform meshes.")
+        if (boundarySetup.inflowType() == InflowSetup::ShiftedPeriodic) WALBERLA_ABORT("Shifted periodicity is currently not supported for non-uniform meshes.")
 
         /// set IDs for farm
         farm.setBlockForest(blocks);

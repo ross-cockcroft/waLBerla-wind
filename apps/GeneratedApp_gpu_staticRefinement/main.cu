@@ -117,6 +117,7 @@ namespace turbine_core {
 
         domain::DomainSetup domainSetup ( globalConfig, boundarySetup.periodicity() );
         
+        if (boundarySetup.inflowType() == InflowSetup::ShiftedPeriodic) WALBERLA_ABORT("Shifted periodicity is currently not supported for non-uniform meshes.")
 
         refinement::StaticRefinementHandler<WindFarm_T> staticRefinementHandler{ globalConfig->getOneBlock("DomainSetup"), &farm, boundarySetup.environmentSetup() };
         auto blocks = domainSetup.createStructuredBlockForest(staticRefinementHandler, fieldGhostLayers);
