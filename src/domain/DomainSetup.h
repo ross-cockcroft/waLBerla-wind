@@ -264,29 +264,7 @@ namespace turbine_core {
             }
 
             if(snapshotHandler_->loadSnapshot) {
-
-                WALBERLA_LOG_INFO_ON_ROOT("Reading the block structure from file " << snapshotHandler_->blockforestFile << "...")
-
-                // load block forest from file
-                walberla::MPIManager::instance()->useWorldComm();
-
-                auto bf = std::make_shared< walberla::BlockForest >(
-                        uint_t(walberla::MPIManager::instance()->rank()),
-                        blockforestFileName.c_str(),
-                        true, false);
-
-                // save data from blockforest for domain decomposition calculation
-                const auto & aabb = bf->getDomain();
-                numLevels_ = bf->getNumberOfLevels();
-                for(uint_t d = 0; d < 3; ++d) {
-                    periodicity_[d] = bf->isPeriodic(d);
-                    domainSize_[d] = uint_t(aabb.max(d));
-                    numberOfCoarseBlocksPerDirection_[d] = bf->getSize(d);
-                    cellsPerBlock_[d] = domainSize_[d] / numberOfCoarseBlocksPerDirection_[d];
-                }
-
-                fixedCellsPerBlock_ = true;
-
+                WALBERLA_ABORT("Loading a snapshot is not supported on refined grids.")
             }
 
             WALBERLA_LOG_INFO_ON_ROOT("Creating the block structure ...")

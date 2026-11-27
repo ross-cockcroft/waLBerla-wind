@@ -142,7 +142,6 @@ namespace turbine_core {
         {% if grid == Grid.UNIFORM -%}
         auto blocks = domainSetup.createUniformBlockForest(farm.getTurbineAABBs());
         {%- else %}
-        WALBERLA_ASSERT(!domainSetup.snapshotHandler_->loadSnapshot, "Restart is currently not supported for non-uniform grids.")
 
         refinement::StaticRefinementHandler<WindFarm_T> staticRefinementHandler{ globalConfig->getOneBlock("DomainSetup"), &farm, boundarySetup.environmentSetup() };
         auto blocks = domainSetup.createStructuredBlockForest(staticRefinementHandler, fieldGhostLayers);
